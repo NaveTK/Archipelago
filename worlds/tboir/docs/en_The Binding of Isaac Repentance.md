@@ -68,17 +68,17 @@ There are 5 categories of items you can receive:
 2. Usefull Items
    These are your traditional Isaac items and are grouped by their item pool.  
    An item from the following pools can be sent to you:
-  - Treasure Room Item
-  - Shop Item
-  - Boss Item
-  - Devil Deal Item
-  - Angle Deal Item
-  - Secret Room Item
-  - Library Item
-  - Curse Room Item
-  - Planetarium Item
-  - Golden Chest Item
-  - Red Chest Item
+   - Treasure Room Item
+   - Shop Item
+   - Boss Item
+   - Devil Deal Item
+   - Angle Deal Item
+   - Secret Room Item
+   - Library Item
+   - Curse Room Item
+   - Planetarium Item
+   - Golden Chest Item
+   - Red Chest Item
 3. "Junk" Items
    These include all sorts of pickups like random hearts, bombs, coins, etc. and are what you'll receive most frequently.
 4. [Optional] Traps
