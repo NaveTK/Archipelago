@@ -18,7 +18,7 @@
 After installing *The Binding of Isaac: Rebirth* and its DLCs via Steam you have two options on how to install the mod:
 - ~~Via Steam Workshop~~
   1. ~~Open the Steam Workshop page for the mod linked above~~
-  2. ~~Click **Subscribe**~~
+  2. ~~Click **Subscribe**~~  
      (Comming soon)
 - Via Github
   1. Open the installation folder of The Binding of Isaac: Rebirth
@@ -56,7 +56,7 @@ validator page: [YAML Validation page](/check)
 5. Press **F2** to open the connection settings
 6. Input the address, port, password and slot name for the MultiWorld Server
 7. Confirm and connect by pressing *Enter*
-  - (If you're playing with a controller, the game might attempt to add a second player when you press *Enter*. In that case, connect with the default confirm button on your controller instead)
+   - (If you're playing with a controller, the game might attempt to add a second player when you press *Enter*. In that case, connect with the default confirm button on your controller instead)
 8. Once the connection status in the top left corner of your game turns green you can start playing
 
 ## Hosting a MultiWorld game
@@ -65,7 +65,7 @@ The recommended way to host a game is to use our hosting service. The process is
 1. Collect config files from your players.
 2. Create a zip file containing your players' config files.
 3. Upload that zip file to the Generate page above.
-  - Generate page: [WebHost Seed Generation Page](/generate)
+   - Generate page: [WebHost Seed Generation Page](/generate)
 4. Wait a moment while the seed is generated.
 5. When the seed is generated, you will be redirected to a "Seed Info" page.
 6. Click "Create New Room". This will take you to the server page. Provide the link to this page to your players, so they may download their patch files from there.
