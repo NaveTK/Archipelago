@@ -99,7 +99,7 @@ Currently no support for multiplayer has been implemented. It will not crash the
 
 ## How many items are there?
 With the default settings, the game includes 448 location checks. But these can be lowered by excluding segments of the game, like the alt paths or the ascend for example.  
-They can also be increased by including more AP Items. By default there are 100 of them and once you collected them all they will not show up anymore.
+They can also be increased by including more AP Items. By default there are 80 of them and once you collected them all they will not show up anymore.
 
 ## Is Archipelago compatible with other The Binding of Isaac: Repentance mods?
 From initial testing it is compatible with most visual, small or QoL mods. However, big mods that heavily change the game, like adding extra stages may not work as well as mods that change the lua modding API like Repentogon.

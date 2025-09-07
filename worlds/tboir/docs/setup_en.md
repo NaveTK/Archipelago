@@ -5,8 +5,8 @@
   - [Steam](https://store.steampowered.com/bundle/2405/The_Binding_of_Isaac_Rebirth_Complete_Bundle/)
 - A save file where the paths to all the endgame bosses are unlocked
 - The Archipelago of Isaac mod
-  - [Steam Workshop]()
-  - [Github]()
+  - ~~[Steam Workshop]()~~ (Comming soon)
+  - [Github](https://github.com/NaveTK/the-archipelago-of-isaac/releases/tag/v0.1)
 
 ## Optional Software
 - isaac-save-installer by Zamiell for a 100% completed save file
@@ -16,15 +16,16 @@
 
 ## Installation Procedures
 After installing *The Binding of Isaac: Rebirth* and its DLCs via Steam you have two options on how to install the mod:
-- Via Steam Workshop
-  1. Open the Steam Workshop page for the mod linked above
-  2. Click **Subscribe**
+- ~~Via Steam Workshop~~
+  1. ~~Open the Steam Workshop page for the mod linked above~~
+  2. ~~Click **Subscribe**~~
+  (Comming soon)
 - Via Github
   1. Open the installation folder of The Binding of Isaac: Rebirth
     - (Can be found by right-clicking the game in your Steam Library and choosing *Manage -> Browse local files*)
   2. See if there is a folder called "**mods**", if not, create one
   3. Inside the mod folder, unpack the "*the archipelago of isaac.zip*" file
-    - (The folder structure should be *mods/the archipelago if isaac/a bunch of files* not *mods/the archipelago if isaac/the archipelago if isaac/a bunch of files*)
+    - (The folder structure should be *mods/the archipelago if isaac/a bunch of files*)
 
 Now navigate back to your Steam Library and right-click The Binding of Isaac: Rebirth again, this time choosing Properties. Then put `--luadebug` into launch options.
 
