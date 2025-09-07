@@ -19,13 +19,13 @@ After installing *The Binding of Isaac: Rebirth* and its DLCs via Steam you have
 - ~~Via Steam Workshop~~
   1. ~~Open the Steam Workshop page for the mod linked above~~
   2. ~~Click **Subscribe**~~
-  (Comming soon)
+     (Comming soon)
 - Via Github
   1. Open the installation folder of The Binding of Isaac: Rebirth
-    - (Can be found by right-clicking the game in your Steam Library and choosing *Manage -> Browse local files*)
+     - (Can be found by right-clicking the game in your Steam Library and choosing *Manage -> Browse local files*)
   2. See if there is a folder called "**mods**", if not, create one
   3. Inside the mod folder, unpack the "*the archipelago of isaac.zip*" file
-    - (The folder structure should be *mods/the archipelago if isaac/a bunch of files*)
+     - (The folder structure should be *mods/the archipelago if isaac/a bunch of files*)
 
 Now navigate back to your Steam Library and right-click The Binding of Isaac: Rebirth again, this time choosing Properties. Then put `--luadebug` into launch options.
 
