@@ -5,12 +5,24 @@ from typing import Any
 from BaseClasses import Item, ItemClassification, Location, Region
 from Options import Option
 from Utils import visualize_regions
+from worlds.LauncherComponents import Component, Type, launch_subprocess, icon_paths, components
 from worlds.generic.Rules import add_item_rule, add_rule, forbid_item, set_rule
 from .locations import location_list
 from .items import item_list
 from .options import TboiOptions
 from worlds.AutoWorld import World
 
+def launch_client():
+    from . import client
+    launch_subprocess(client.launch, name="Isaac Client")
+
+
+components.append(Component("Isaac Client",
+                            func=launch_client,
+                            component_type=Type.CLIENT,
+                            icon="isaac"))
+
+icon_paths["isaac"] = f"ap:{__name__}/icons/isaac.png"
 
 class TboiLocation(Location):
     game = "The Binding of Isaac Repentance"
