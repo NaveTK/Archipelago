@@ -130,7 +130,7 @@ class TboiWorld(World):
         return items_added
 
     def create_items(self):
-        own_items = 0
+        own_items = len(self.options.goals.value)
         for name, floor in self.data['floors'].items():
             if floor["unlocked"]: continue
             if floor["type"] == "alt" and "Alt Path" in self.options.excluded_areas.value: continue
