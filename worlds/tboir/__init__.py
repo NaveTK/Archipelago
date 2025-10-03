@@ -1,12 +1,11 @@
 import json
-from math import floor
 import pkgutil
 from typing import Any
 from BaseClasses import Item, ItemClassification, Location, Region
 from Options import Option
-from Utils import visualize_regions
+import settings
 from worlds.LauncherComponents import Component, Type, launch_subprocess, icon_paths, components
-from worlds.generic.Rules import add_item_rule, add_rule, forbid_item, set_rule
+from worlds.generic.Rules import add_item_rule, add_rule, forbid_item
 from .locations import location_list
 from .items import item_list
 from .options import TboiOptions
@@ -30,12 +29,21 @@ class TboiLocation(Location):
 class TboiItem(Item):
     game = "The Binding of Isaac Repentance"
 
+
+class TboiSettings(settings.Group):
+    class GameFolder(settings.UserFolderPath):
+        """Location of The Binding of Isaac installation directory"""
+        description = "Isaac installation directory"
+
+    game_folder: GameFolder = GameFolder("The Binding of Isaac Rebirth")
+
 class TboiWorld(World):
     """TODO: Description"""
     game = "The Binding of Isaac Repentance"
     options_dataclass = TboiOptions
     options: TboiOptions
     topology_present = True
+    settings: TboiSettings
 
     data = json.loads(pkgutil.get_data(__name__, "data.json").decode())
 
