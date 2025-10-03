@@ -58,16 +58,16 @@ That means, even if a mini boss room in the Flooded Caves didn't spawn, sucessfu
 
 ## What The Binding of Isaac: Repentance items can appear in other players' worlds?
 There are 5 categories of items you can receive:
-1. Progression Items
+1. Progression Items  
    These items unlock all the areas in your game and are called "*Unlock [Stage name]*".  
    In your game, most doors and trapdoors that lead to other areas do not spawn unless you have received one of the respective Unlock items.  
    So there will be no door to Downpour/Dross after your Basement boss unless Dross or Downpour has been unlocked for you.  
    Negative and Polaroid are replaced by Boss items unless Chest/Dark Room is unlocked respectively.  
    Key pieces are replaced by Angel items unless Mega Satan is unlocked.  
    Etc.
-2. Usefull Items
+2. Usefull Items  
    These are your traditional Isaac items and are grouped by their item pool.  
-   An item from the following pools can be sent to you:
+   An item from the following pools can be sent to you:  
    - Treasure Room Item
    - Shop Item
    - Boss Item
@@ -79,7 +79,7 @@ There are 5 categories of items you can receive:
    - Planetarium Item
    - Golden Chest Item
    - Red Chest Item
-3. "Junk" Items
+3. "Junk" Items  
    These include all sorts of pickups like random hearts, bombs, coins, etc. and are what you'll receive most frequently.
 4. [Optional] Traps
 5. [Optional] 1-Ups
