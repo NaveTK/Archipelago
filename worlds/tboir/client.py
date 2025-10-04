@@ -1,8 +1,11 @@
 from __future__ import annotations
 import asyncio
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from enum import Enum
+import json
 import os
-import uuid
+from queue import Queue
 import colorama
 
 import ModuleUpdate
@@ -15,8 +18,7 @@ import Utils
 if __name__ == "__main__":
     Utils.init_logging("Isaac Client", exception_logger="Client")
 
-from NetUtils import NetworkItem, ClientStatus
-from CommonClient import gui_enabled, logger, get_base_parser, ClientCommandProcessor, \
+from CommonClient import gui_enabled, logger, ClientCommandProcessor, \
     CommonContext, server_loop
 
 class IsaacClientCommandProcessor(ClientCommandProcessor):
@@ -37,6 +39,19 @@ class IsaacContext(CommonContext):
         DISCONNECTED = 1
         GATHERING_DATA = 2
         CONNECTED = 3
+
+    @dataclass
+    class Command:
+        type: str
+        payload: any
+
+    @dataclass
+    class SaveData:
+        seed: str
+        timestamp: str
+        actor: str
+        commands: list[IsaacContext.Command]
+
 
     command_processor: int = IsaacClientCommandProcessor
     game = "The Binding of Isaac Repentance"
@@ -124,7 +139,7 @@ class IsaacContext(CommonContext):
                     self.set_data(f"{self.username}_run_data", self.stored_data[f"{self.username}_run_data"])
             if f"{self.username}_session_data" in args["keys"]:
                 if self.stored_data[f"{self.username}_session_data"] is None:
-                    self.stored_data[f"{self.username}_session_data"] = { "sessionID": uuid.uuid4().int }
+                    self.stored_data[f"{self.username}_session_data"] = {}
                     self.set_data(f"{self.username}_session_data", self.stored_data[f"{self.username}_session_data"])
 
         if cmd in {"ReceivedItems"}:
@@ -150,8 +165,54 @@ class IsaacContext(CommonContext):
         self.ui = IsaacManager(self)
         self.ui_task = asyncio.create_task(self.ui.async_run(), name="UI")
 
+    commands_to_be_sent = Queue()
+
+    def process_mod_command(self, c: IsaacContext.Command):
+        if c.type == "RequestAll":
+            resp = IsaacContext.Command()
+            resp.type = "AllData"
+            resp.payload = {
+                "run_data": self.stored_data[f"{self.username}_run_data"],
+                "session_data": self.stored_data[f"{self.username}_session_data"],
+                "checked_locations": self.checked_locations,
+                "missing_locations": self.missing_locations,
+                "received_items": self.items_received,
+                "item_names": self.item_names,
+                "location_names": self.location_names,
+                "player_names": self.player_names,
+                "seed": self.seed_name,
+                "slot_info": self.slot_info,
+                "slot": self.slot
+            }
+            self.commands_to_be_sent.put(resp)
+        else:
+            pass
+
     def poll(self):
-        pass
+        if not os.path.isfile(self.save_data_path): return
+
+        data = json.loads(open(self.save_data_path).read())
+        save_data = IsaacContext.SaveData(
+            seed=data["seed"],
+            timestamp=data["timestamp"],
+            actor=data["actor"],
+            commands=[IsaacContext.Command(**c) for c in data["commands"]]
+        )
+
+        if save_data.actor != "mod": return
+        if save_data.seed != "" and save_data.seed != self.seed_name: return
+
+        for c in save_data.commands:
+            self.process_mod_command(c)
+
+        new_save_data = IsaacContext.SaveData(
+            seed=self.seed_name,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            actor="client",
+            commands=[self.commands_to_be_sent.get() for _ in range(self.commands_to_be_sent.qsize())]
+        )
+        with open(self.save_data_path, "w") as f:
+            json.dump(asdict(new_save_data), f, indent=2)
 
 async def game_watcher(ctx: IsaacContext):
     while not ctx.exit_event.is_set():
