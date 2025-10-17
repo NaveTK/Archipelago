@@ -2,10 +2,12 @@ from __future__ import annotations
 import asyncio
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
+import time
 from enum import Enum
 import json
 import os
 from queue import Queue
+from uuid import uuid4
 import colorama
 
 import ModuleUpdate
@@ -47,16 +49,17 @@ class IsaacContext(CommonContext):
 
     @dataclass
     class SaveData:
-        seed: str
-        timestamp: str
+        session_id: str
+        timestamp: int
         actor: str
         commands: list[IsaacContext.Command]
-
 
     command_processor: int = IsaacClientCommandProcessor
     game = "The Binding of Isaac Repentance"
     items_handling = 0b111  # full remote
     current_state = State.DISCONNECTED
+    options = {}
+    scouted_locations = {}
 
     def __init__(self, server_address: str | None, password: str | None):
         super(IsaacContext, self).__init__(server_address, password)
@@ -124,23 +127,27 @@ class IsaacContext(CommonContext):
     def on_package(self, cmd: str, args: dict):
         if cmd in {"Connected"}:
             self.current_state = self.State.GATHERING_DATA
+            self.options = args['slot_data']['options']
             Utils.async_start(self.send_msgs([
                 {"cmd": "Get", "keys": [f"{self.username}_saveslot",
-                                        f"{self.username}_run_data",
-                                        f"{self.username}_session_data"]}]))
+                                        f"{self.username}_run_info",
+                                        f"{self.username}_session_id"]}]))
+            if len(self.locations_scouted) == 0:
+                Utils.async_start(self.send_msgs([
+                    {"cmd": "LocationScouts", "locations": [code for code in self.server_locations], "create_as_hint": False}]))
         if cmd in {"Retrieved"}:
             if f"{self.username}_saveslot" in args["keys"]:
                 if self.stored_data[f"{self.username}_saveslot"] is None:
                     self.stored_data[f"{self.username}_saveslot"] = 0
                     self.set_data(f"{self.username}_saveslot", self.stored_data[f"{self.username}_saveslot"])
-            if f"{self.username}_run_data" in args["keys"]:
-                if self.stored_data[f"{self.username}_run_data"] is None:
-                    self.stored_data[f"{self.username}_run_data"] = {}
-                    self.set_data(f"{self.username}_run_data", self.stored_data[f"{self.username}_run_data"])
-            if f"{self.username}_session_data" in args["keys"]:
-                if self.stored_data[f"{self.username}_session_data"] is None:
-                    self.stored_data[f"{self.username}_session_data"] = {}
-                    self.set_data(f"{self.username}_session_data", self.stored_data[f"{self.username}_session_data"])
+            if f"{self.username}_run_info" in args["keys"]:
+                if self.stored_data[f"{self.username}_run_info"] is None:
+                    self.stored_data[f"{self.username}_run_info"] = {}
+                    self.set_data(f"{self.username}_run_info", self.stored_data[f"{self.username}_run_info"])
+            if f"{self.username}_session_id" in args["keys"]:
+                if self.stored_data[f"{self.username}_session_id"] is None:
+                    self.stored_data[f"{self.username}_session_id"] = str(uuid4().int)
+                    self.set_data(f"{self.username}_session_id", self.stored_data[f"{self.username}_session_id"])
 
         if cmd in {"ReceivedItems"}:
             start_index = args["index"]
@@ -151,6 +158,9 @@ class IsaacContext(CommonContext):
             if "checked_locations" in args:
                 for ss in self.checked_locations:
                     pass
+        if cmd in {"LocationInfo"}:
+            if "locations" in args:
+                self.scouted_locations = { l.location: {"item": l.item, "location": l.location, "player": l.player, "flags": l.flags } for l in args["locations"]}
 
     def run_gui(self):
         """Import kivy UI system and start running it as self.ui_task."""
@@ -169,21 +179,23 @@ class IsaacContext(CommonContext):
 
     def process_mod_command(self, c: IsaacContext.Command):
         if c.type == "RequestAll":
-            resp = IsaacContext.Command()
-            resp.type = "AllData"
-            resp.payload = {
-                "run_data": self.stored_data[f"{self.username}_run_data"],
-                "session_data": self.stored_data[f"{self.username}_session_data"],
-                "checked_locations": self.checked_locations,
-                "missing_locations": self.missing_locations,
-                "received_items": self.items_received,
-                "item_names": self.item_names,
-                "location_names": self.location_names,
-                "player_names": self.player_names,
-                "seed": self.seed_name,
-                "slot_info": self.slot_info,
-                "slot": self.slot
-            }
+            resp = IsaacContext.Command(
+                type = "AllData",
+                payload = {
+                    "run_info": self.stored_data[f"{self.username}_run_info"],
+                    "session_id": self.stored_data[f"{self.username}_session_id"],
+                    "checked_locations": [code for code in self.checked_locations],
+                    "missing_locations": [code for code in self.missing_locations],
+                    "received_items": [{ "flags": item.flags, "item": item.item, "location": item.location, "player": item.player } for item in self.items_received],
+                    "item_names": { slot.game: { code: name  for code, name in self.item_names[slot.game].items() } for slot in self.slot_info.values() },
+                    "location_names": { code: name for code, name in self.location_names[self.game].items() },
+                    "slot_info": {k: {"name": v.name, "game": v.game} for k, v in self.slot_info.items()},
+                    "slot": self.slot,
+                    "options": self.options,
+                    "scouted_locations": self.scouted_locations,
+                    "hints": self.stored_data[f"_read_hints_{self.team}_{self.slot}"]
+                }
+            )
             self.commands_to_be_sent.put(resp)
         else:
             pass
@@ -193,51 +205,57 @@ class IsaacContext(CommonContext):
 
         data = json.loads(open(self.save_data_path).read())
         save_data = IsaacContext.SaveData(
-            seed=data["seed"],
+            session_id=data["session_id"],
             timestamp=data["timestamp"],
             actor=data["actor"],
-            commands=[IsaacContext.Command(**c) for c in data["commands"]]
+            commands=[IsaacContext.Command(type=c["type"], payload=c["payload"]) for c in data["commands"]]
         )
 
         if save_data.actor != "mod": return
-        if save_data.seed != "" and save_data.seed != self.seed_name: return
+        if save_data.session_id != "" and save_data.session_id != self.stored_data[f"{self.username}_session_id"]: return
 
         for c in save_data.commands:
             self.process_mod_command(c)
 
         new_save_data = IsaacContext.SaveData(
-            seed=self.seed_name,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            session_id=self.stored_data[f"{self.username}_session_id"],
+            timestamp=int(time.monotonic() * 1000),
             actor="client",
             commands=[self.commands_to_be_sent.get() for _ in range(self.commands_to_be_sent.qsize())]
         )
         with open(self.save_data_path, "w") as f:
-            json.dump(asdict(new_save_data), f, indent=2)
+            dump = json.dumps(asdict(new_save_data))
+            f.write(dump)
 
 async def game_watcher(ctx: IsaacContext):
     while not ctx.exit_event.is_set():
-        if not ctx.mod_viable and (not ctx._messagebox or not ctx._messagebox._is_open) and ctx.ui:
-            ctx.resolve_paths()
-
-        if ctx.current_state == ctx.State.GATHERING_DATA \
-                and ctx.stored_data[f"{ctx.username}_saveslot"] is not None \
-                and ctx.stored_data[f"{ctx.username}_session_data"] is not None \
-                and ctx.stored_data[f"{ctx.username}_run_data"] is not None:
-            while ctx.stored_data[f"{ctx.username}_saveslot"] == 0:
-                logger.info('Enter save slot (1-3):')
-                try:
-                    slot = int(await ctx.console_input())
-                    if slot >= 1 and slot <= 3:
-                        ctx.stored_data[f"{ctx.username}_saveslot"] = slot
-                        ctx.set_data(f"{ctx.username}_saveslot", slot)
-                except:
-                    pass
-            logger.info(f'Connecting to save slot {ctx.stored_data[f"{ctx.username}_saveslot"]}')
-            ctx.save_data_path = os.path.join(ctx.settings.game_folder, "data", "the archipelago of isaac", f"save{ctx.stored_data[f"{ctx.username}_saveslot"]}.dat")
-            ctx.current_state = ctx.State.CONNECTED
-        if ctx.current_state == ctx.State.CONNECTED:
-            ctx.poll()
         await asyncio.sleep(0.1)
+        if ctx._messagebox and ctx._messagebox._is_open: continue
+        try:
+            if not ctx.mod_viable:
+                ctx.resolve_paths()
+
+            if ctx.current_state == ctx.State.GATHERING_DATA \
+                    and f"{ctx.username}_saveslot" in ctx.stored_data.keys() \
+                    and f"{ctx.username}_session_id" in ctx.stored_data.keys() \
+                    and f"{ctx.username}_run_info" in ctx.stored_data.keys() \
+                    and len(ctx.scouted_locations) > 0:
+                while ctx.stored_data[f"{ctx.username}_saveslot"] == 0:
+                    logger.info('Enter save slot (1-3):')
+                    try:
+                        slot = int(await ctx.console_input())
+                        if slot >= 1 and slot <= 3:
+                            ctx.stored_data[f"{ctx.username}_saveslot"] = slot
+                            ctx.set_data(f"{ctx.username}_saveslot", slot)
+                    except:
+                        pass
+                logger.info(f'Connecting to save slot {ctx.stored_data[f"{ctx.username}_saveslot"]}')
+                ctx.save_data_path = os.path.join(ctx.settings.game_folder, "data", "the archipelago of isaac", f"save{ctx.stored_data[f"{ctx.username}_saveslot"]}.dat")
+                ctx.current_state = ctx.State.CONNECTED
+            if ctx.current_state == ctx.State.CONNECTED:
+                ctx.poll()
+        except Exception as e:
+            ctx.gui_error("ERROR", e)
 
 
 async def main():

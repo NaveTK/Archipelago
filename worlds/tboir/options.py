@@ -3,33 +3,61 @@ from dataclasses import dataclass
 from Options import DeathLink, DefaultOnToggle, OptionCounter, OptionSet, Toggle, Range, PerGameCommonOptions
 
 
-class ForceLategame(DefaultOnToggle):
+class BadRNGProtection(DefaultOnToggle):
     """
-    By enabling this the generation tries to avoid placing Unlocks for "early" Areas like Womb into lategame areas like Home.
-    This avoid situations where the first path of progression would already be to one of the endgame bossses like Beast when you don't even have the Womb unlocked yet.
-    Overall this leads to a smoother progression curve where first the easier paths open up before the hard ones.
-    But experienced players may want to embrace the challenge of having to do the hard parts first when their runs are still fairly weak and disable this.
+    By enabling this, succesfully winning a run unlocks all the room location checks per stage which didn't spawn on all the stages you went through during that run.
+    That means, even if a Mini Boss room didn't spawn in the Flooded Caves, you'll still get the unlock if you have been to the Flooded Caves during that run upon finishing the run succesfully.
+    (Stage specific Room Type Locations to be checked this way: Arcade, Challenge Room, Curse Room and Sacrifice Room)
     """
-    display_name = "Force Lategame to be late"
+    display_name = "Bad RNG Protection"
 
-class WinCollectsMissedLocations(DefaultOnToggle):
+class FortuneMachineHintPercentage(Range):
     """
-    By enabling this, succesfully winning a run unlocks all the room location checks you missed or which didn't spawn on all the stages you went through during that run.
-    That means, even if a Mini Boss room didn't spawn in the Flooded Caves, you'll still get the unlock if you have been to the Flooded Caves during that run if you end it with a win.
+    Chance for a Fortune Telling Machine to give a hint.
     """
-    display_name = "Win collects missed locations"
+    display_name = "Fornue Machine Hint Percentage"
+    range_start = 0
+    range_end = 100
+    default = 30
 
-class FortunesAreHints(DefaultOnToggle):
+class CrystalBallHintPercentage(Range):
     """
-    By enabling this, playing a Fortune Telling machine gives you a hint for an item in your world.
-    The hints are completly random and mostly include hints for Junk items so you'll still have to spend quite a bit of money until you get a hint for something usefull.
+    Chance for a Crystal Ball to give a hint.
     """
-    display_name = "Fornues are Hints"
+    display_name = "Crystal Ball Hint Percentage"
+    range_start = 0
+    range_end = 100
+    default = 100
+
+class FortuneCookieHintPercentage(Range):
+    """
+    Chance for a Fortune Cookie to give a hint.
+    """
+    display_name = "Fornue Cookie Hint Percentage"
+    range_start = 0
+    range_end = 100
+    default = 50
+
+class HintTypesFromFortunes(OptionSet):
+    """
+    The type of items you are able to get Hints for through fortunes.
+    Valid types are: ["Progression Items", "Usefull Items", "Junk Items", "Traps"]
+    """
+    display_name = "Hint types from Fortunes"
+
+    valid_keys = frozenset({
+        "Progression Items",
+        "Usefull Items",
+        "Junk Items",
+        "Traps"
+    })
+    default = frozenset({"Progression Items", "Usefull Items"})
 
 class Goals(OptionSet):
     """
     Set of all bosses you'll have to beat to sucessfully win the game.
     Valid bosses are: ["Mom", "Mom's Heart", "Isaac", "Satan", "Blue Baby", "The Lamb", "Mega Satan", "Boss Rush", "Hush", "Beast", "Mother", "Delirium"]
+    Can also be set to "All" to include all bosses, or "Random#", where # determines the number of random bosses. F.e. "Random3" will select 3 Bosses at random
     """
     display_name = "Goals"
 
@@ -45,11 +73,23 @@ class Goals(OptionSet):
         "Hush",
         "Beast",
         "Mother",
-        "Delirium"
+        "Delirium",
+        "All",
+        "Random1",
+        "Random2",
+        "Random3",
+        "Random4",
+        "Random5",
+        "Random6",
+        "Random7",
+        "Random8",
+        "Random9",
+        "Random10",
+        "Random11"
     })
     default = frozenset({"Mega Satan", "Beast", "Mother", "Delirium"})
 
-class ExcludeAreas(OptionSet):
+class ExcludedAreas(OptionSet):
     """
     Entire areas to exclude from the game. By excluding an area, none of the entrance methods to the area will be able to spawn and neither are locations placed in those areas.
     Valid areas are: ["The Void", "Ascend", "Alt Path", "Timed Areas"]
@@ -59,28 +99,82 @@ class ExcludeAreas(OptionSet):
     valid_keys = frozenset({"The Void", "Ascend", "Alt Path", "Timed Areas"})
     default = frozenset({})
 
-class AdditionalItemLocations(Range):
+class AdditionalItemLocationsPerStage(OptionCounter):
     """
     Number of available AP Items that occasinally replace regular items.
     Picking up an AP Item is a location check. Once all the checks have been completed no more AP Items will spawn.
     """
-    display_name = "Additional Item Locations"
-    range_start = 0
-    range_end = 300
-    default = 80
+    display_name = "Additional Item Locations per Stage"
+    valid_keys = frozenset({
+        "Basement",
+        "Cellar",
+        "Burning Basement",
+        "Caves",
+        "Catacombs",
+        "Flooded Caves",
+        "Depths",
+        "Necropolis",
+        "Dank Depths",
+        "Boss Rush",
+        "Womb",
+        "Utero",
+        "Scarred Womb",
+        "???",
+        "Cathedral",
+        "Sheol",
+        "Chest",
+        "Dark Room",
+        "The Void",
+        "Downpour",
+        "Dross",
+        "Mines",
+        "Ashpit",
+        "Mausoleum",
+        "Gehenna",
+        "Corpse",
+        "Home"
+    })
+    min = 0
+    max = 10
+    default = {
+        "Basement": 3,
+        "Cellar": 3,
+        "Burning Basement": 3,
+        "Caves": 3,
+        "Catacombs": 3,
+        "Flooded Caves": 3,
+        "Depths": 3,
+        "Necropolis": 3,
+        "Dank Depths": 3,
+        "Boss Rush": 1,
+        "Womb": 1,
+        "Utero": 1,
+        "Scarred Womb": 1,
+        "???": 2,
+        "Cathedral": 0,
+        "Sheol": 0,
+        "Chest": 2,
+        "Dark Room": 2,
+        "The Void": 3,
+        "Downpour": 3,
+        "Dross": 3,
+        "Mines": 3,
+        "Ashpit": 3,
+        "Mausoleum": 3,
+        "Gehenna": 3,
+        "Corpse": 1,
+        "Home": 0
+    }
 
-class ItemLocationStep(Range):
+class ItemLocationPercentage(Range):
     """
-    Frequency of how many Items are replaced by AP Items.
-    1 means, every item you see
-    2 means, every second item you see
-    etc.
+    Chance for an item to replaced with an AP item (if there are still AP Item checks avaialble for the current Stage)
     Fixed item drops are not replaced, only those that roll a random item from an item pool.
     """
-    display_name = "Item Location Step"
-    range_start = 1
-    range_end = 5
-    default = 3
+    display_name = "Item Location Percentage"
+    range_start = 0
+    range_end = 100
+    default = 50
 
 class AdditionalBossRewards(DefaultOnToggle):
     """
@@ -108,7 +202,7 @@ class JunkPercentage(Range):
     display_name = "Junk Percentage"
     range_start = 0
     range_end = 100
-    default = 85
+    default = 75
 
 class TrapPercentage(Range):
     """
@@ -241,24 +335,47 @@ class RetainOneUpsPercentage(Range):
     range_end = 100
     default = 100
     
+class ExcludeItemsAsRewards(OptionSet):
+    """
+    Actively harmeful items can be excluded here from being given as a reward to the player.
+    Valid items are: ["A Pound of Flesh", "Blood Oath", "Blood Puppy", "Cursed Eye", "Curse of the Tower", "Isaac's Heart", "Kidney Stone", "Missing No", "Shard of Glass", "TMTrainer"]
+    """
+    display_name = "Exclude items as rewards"
+
+    valid_keys = frozenset({
+        "A Pound of Flesh",
+        "Blood Oath",
+        "Blood Puppy",
+        "Cursed Eye",
+        "Curse of the Tower",
+        "Isaac's Heart",
+        "Kidney Stone",
+        "Missing No",
+        "Shard of Glass",
+        "TMTrainer"
+    })
+    default = frozenset({"Missing No", "TMTrainer"})
+
 @dataclass
 class TboiOptions(PerGameCommonOptions):
+    bad_rng_protection: BadRNGProtection
+    fortune_machine_hint_percentage: FortuneMachineHintPercentage
+    crystal_ball_hint_percentage: CrystalBallHintPercentage
+    fortune_cookie_hint_percentage: FortuneCookieHintPercentage
+    hint_types_from_fortunes: HintTypesFromFortunes
     goals: Goals
-    excluded_areas: ExcludeAreas
-    force_lategame: ForceLategame
-    win_collects_missed_locations: WinCollectsMissedLocations
-    scatter_previous_items: ScatterPreviousItems
+    excluded_areas: ExcludedAreas
+    additional_item_locations_per_stage: AdditionalItemLocationsPerStage
+    item_location_percentage: ItemLocationPercentage
     additional_boss_rewards: AdditionalBossRewards
-    fortunes_are_hints: FortunesAreHints
-    additional_item_locations: AdditionalItemLocations
-    item_location_step: ItemLocationStep
+    scatter_previous_items: ScatterPreviousItems
+    junk_percentage: JunkPercentage
+    trap_percentage: TrapPercentage
     item_weights: ItemWeights
     retain_items_percentage: RetainItemsPercentage
-    junk_percentage: JunkPercentage
     junk_weights: JunkWeights
     retain_junk_percentage: RetainJunkPercentage
-    trap_percentage: TrapPercentage
     trap_weights: TrapWeights
-    deathlink: DeathLink
     one_ups: OneUps
     retain_one_ups_percentage: RetainOneUpsPercentage
+    exclude_items_as_rewards: ExcludeItemsAsRewards
