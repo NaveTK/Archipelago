@@ -11,6 +11,7 @@ from uuid import uuid4
 import colorama
 
 import ModuleUpdate
+from NetUtils import NetworkItem
 import settings
 from worlds.tboir import TboiSettings
 ModuleUpdate.update()
@@ -120,6 +121,7 @@ class IsaacContext(CommonContext):
         await super(IsaacContext, self).shutdown()
     
     def set_data(self, key: str, value: any):
+        self.stored_data[key] = value
         Utils.async_start(self.send_msgs([
             {"cmd": "Set", "key": key, "want_reply": False, "operations": [{"operation": "replace", "value": value}]}
             ]))
@@ -135,25 +137,30 @@ class IsaacContext(CommonContext):
             if len(self.locations_scouted) == 0:
                 Utils.async_start(self.send_msgs([
                     {"cmd": "LocationScouts", "locations": [code for code in self.server_locations], "create_as_hint": False}]))
+            self.ui.debugTab.updateDebug(self)
         if cmd in {"Retrieved"}:
             if f"{self.username}_saveslot" in args["keys"]:
                 if self.stored_data[f"{self.username}_saveslot"] is None:
-                    self.stored_data[f"{self.username}_saveslot"] = 0
-                    self.set_data(f"{self.username}_saveslot", self.stored_data[f"{self.username}_saveslot"])
+                    self.set_data(f"{self.username}_saveslot", 0)
             if f"{self.username}_run_info" in args["keys"]:
                 if self.stored_data[f"{self.username}_run_info"] is None:
-                    self.stored_data[f"{self.username}_run_info"] = {}
-                    self.set_data(f"{self.username}_run_info", self.stored_data[f"{self.username}_run_info"])
+                    self.set_data(f"{self.username}_run_info", {})
+                self.ui.debugTab.updateDebug(self)
             if f"{self.username}_session_id" in args["keys"]:
                 if self.stored_data[f"{self.username}_session_id"] is None:
-                    self.stored_data[f"{self.username}_session_id"] = str(uuid4().int)
-                    self.set_data(f"{self.username}_session_id", self.stored_data[f"{self.username}_session_id"])
+                    self.set_data(f"{self.username}_session_id", str(uuid4().int))
 
         if cmd in {"ReceivedItems"}:
             start_index = args["index"]
-            if start_index != len(self.items_received):
+            if start_index != len(self.items_received) and self.current_state == self.State.CONNECTED:
+                items = []
                 for item in args['items']:
-                    pass
+                    net_item = {"item": item[0], "location": item[1], "player": item[2], "flags": item[3]}
+                    items.append(net_item)
+                self.commands_to_be_sent.put(IsaacContext.Command(
+                    type="ReceiveItems",
+                    payload=items
+                ))
         if cmd in {"RoomUpdate"}:
             if "checked_locations" in args:
                 for ss in self.checked_locations:
@@ -165,12 +172,40 @@ class IsaacContext(CommonContext):
     def run_gui(self):
         """Import kivy UI system and start running it as self.ui_task."""
         from kvui import GameManager
+        from kivy.uix.label import Label
+        from kivy.uix.boxlayout import BoxLayout
+        from kivy.uix.scrollview import ScrollView
 
         class IsaacManager(GameManager):
             logging_pairs = [
                 ("Client", "Archipelago")
             ]
             base_title = "Archipelago Isaac Client"
+            debugTab = None
+
+            def build(self):
+                container = super().build()
+                scroll_view = ScrollView()
+                self.debugTab = DebugLayout(size_hint_y=None)
+                scroll_view.add_widget(self.debugTab)
+                self.add_client_tab("Debug", scroll_view)
+                return container
+
+        class DebugLayout(BoxLayout):
+            def updateDebug(self, ctx: IsaacContext):
+                if len(self.children) > 0:
+                    self.remove_widget(self.children[1])
+                    self.remove_widget(self.children[0])
+
+                options_text = json.dumps(ctx.options, indent=4, ensure_ascii=False)
+                options= Label(text=options_text)
+                run_info_text = "{}"
+                if f"{ctx.username}_run_info" in ctx.stored_data:
+                    run_info_text = json.dumps(ctx.stored_data[f"{ctx.username}_run_info"], indent=4, ensure_ascii=False)
+                run_info = Label(text=run_info_text)
+                self.add_widget(options)
+                self.add_widget(run_info)
+                self.height=options.font_size*options_text.count('\n')*1.25
 
         self.ui = IsaacManager(self)
         self.ui_task = asyncio.create_task(self.ui.async_run(), name="UI")
@@ -197,6 +232,11 @@ class IsaacContext(CommonContext):
                 }
             )
             self.commands_to_be_sent.put(resp)
+        elif c.type == "Set":
+            self.set_data(f"{self.username}_{c.payload["key"]}", c.payload["data"])
+            self.ui.debugTab.updateDebug(self)
+        elif c.type == "SendLocations":
+            Utils.async_start(self.check_locations(c.payload))
         else:
             pass
 
