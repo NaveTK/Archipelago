@@ -137,7 +137,7 @@ class TboiWorld(World):
                         region.connect(boss_region)
             if available:
                 if self.options.additional_boss_rewards:
-                    for i in range(reward):
+                    for i in range(reward["amount"]):
                         boss_region.add_locations(self.create_location(f'{boss} Reward #{i+1}'), TboiLocation)
                     self.multiworld.regions.append(boss_region)
                 if boss in self.options.goals:

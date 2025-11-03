@@ -9,7 +9,7 @@ def location_list(data):
                 locations.append(f'{name} - {room}')
     
     for boss, reward in data["boss_rewards"].items():
-        for i in range(reward):
+        for i in range(reward["amount"]):
             locations.append(f'{boss} Reward #{i+1}')
 
     for stage in AdditionalItemLocationsPerStage.valid_keys:

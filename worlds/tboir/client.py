@@ -137,7 +137,7 @@ class IsaacContext(CommonContext):
             if len(self.locations_scouted) == 0:
                 Utils.async_start(self.send_msgs([
                     {"cmd": "LocationScouts", "locations": [code for code in self.server_locations], "create_as_hint": False}]))
-            self.ui.debugTab.updateDebug(self)
+            self.ui.debug_tab.updateDebug(self)
         if cmd in {"Retrieved"}:
             if f"{self.username}_saveslot" in args["keys"]:
                 if self.stored_data[f"{self.username}_saveslot"] is None:
@@ -145,7 +145,7 @@ class IsaacContext(CommonContext):
             if f"{self.username}_run_info" in args["keys"]:
                 if self.stored_data[f"{self.username}_run_info"] is None:
                     self.set_data(f"{self.username}_run_info", {})
-                self.ui.debugTab.updateDebug(self)
+                self.ui.debug_tab.updateDebug(self)
             if f"{self.username}_session_id" in args["keys"]:
                 if self.stored_data[f"{self.username}_session_id"] is None:
                     self.set_data(f"{self.username}_session_id", str(uuid4().int))
@@ -161,6 +161,7 @@ class IsaacContext(CommonContext):
                     type="ReceiveItems",
                     payload=items
                 ))
+                self.ui.tracker_tab.on_item_update(args['items'])
         if cmd in {"RoomUpdate"}:
             if "checked_locations" in args:
                 for ss in self.checked_locations:
@@ -174,28 +175,36 @@ class IsaacContext(CommonContext):
         from kvui import GameManager
         from kivy.uix.label import Label
         from kivy.uix.boxlayout import BoxLayout
+        from kivy.uix.floatlayout import FloatLayout
         from kivy.uix.scrollview import ScrollView
+        from worlds.tboir.tracker import TrackerLayout
+        from kivy.core.window import Window
 
         class IsaacManager(GameManager):
             logging_pairs = [
                 ("Client", "Archipelago")
             ]
             base_title = "Archipelago Isaac Client"
-            debugTab = None
+            debug_tab = None
+            tracker_tab = None
 
             def build(self):
                 container = super().build()
+
                 scroll_view = ScrollView()
-                self.debugTab = DebugLayout(size_hint_y=None)
-                scroll_view.add_widget(self.debugTab)
+                self.debug_tab = DebugLayout(size_hint_y=None)
+                scroll_view.add_widget(self.debug_tab)
                 self.add_client_tab("Debug", scroll_view)
+
+                self.tracker_tab = TrackerLayout()
+                self.add_client_tab("Tracker", self.tracker_tab)
+
+                self.tracker_tab.init_base()
                 return container
 
         class DebugLayout(BoxLayout):
             def updateDebug(self, ctx: IsaacContext):
-                if len(self.children) > 0:
-                    self.remove_widget(self.children[1])
-                    self.remove_widget(self.children[0])
+                self.clear_widgets()
 
                 options_text = json.dumps(ctx.options, indent=4, ensure_ascii=False)
                 options= Label(text=options_text)
@@ -234,8 +243,10 @@ class IsaacContext(CommonContext):
             self.commands_to_be_sent.put(resp)
         elif c.type == "Set":
             self.set_data(f"{self.username}_{c.payload["key"]}", c.payload["data"])
-            self.ui.debugTab.updateDebug(self)
+            self.ui.debug_tab.updateDebug(self)
+            self.ui.tracker_tab.on_runinfo_update(self.stored_data[f"{self.username}_run_info"])
         elif c.type == "SendLocations":
+            self.ui.tracker_tab.on_location_update(c.payload)
             Utils.async_start(self.check_locations(c.payload))
         else:
             pass
@@ -292,6 +303,10 @@ async def game_watcher(ctx: IsaacContext):
                 logger.info(f'Connecting to save slot {ctx.stored_data[f"{ctx.username}_saveslot"]}')
                 ctx.save_data_path = os.path.join(ctx.settings.game_folder, "data", "the archipelago of isaac", f"save{ctx.stored_data[f"{ctx.username}_saveslot"]}.dat")
                 ctx.current_state = ctx.State.CONNECTED
+                ctx.ui.tracker_tab.on_connect(ctx)
+                ctx.ui.tracker_tab.on_runinfo_update(ctx.stored_data[f"{ctx.username}_run_info"])
+                ctx.ui.tracker_tab.on_location_update(ctx.checked_locations)
+                ctx.ui.tracker_tab.on_item_update(ctx.items_received)
             if ctx.current_state == ctx.State.CONNECTED:
                 ctx.poll()
         except Exception as e:
