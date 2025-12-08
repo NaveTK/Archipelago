@@ -6,7 +6,7 @@
 - A save file where the paths to all the endgame bosses are unlocked
 - The Archipelago of Isaac mod
   - ~~[Steam Workshop]()~~ (Comming soon)
-  - [Github](https://github.com/NaveTK/the-archipelago-of-isaac/releases/tag/v0.1)
+  - [Github](https://github.com/NaveTK/the-archipelago-of-isaac/releases/latest)
 
 ## Optional Software
 - isaac-save-installer by Zamiell for a 100% completed save file
