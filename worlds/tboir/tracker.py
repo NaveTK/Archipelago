@@ -30,26 +30,6 @@ class TrackerLayout(Widget):
             fit_mode="contain"
         )
 
-    def init_base(self):
-        self.img = self.load_image('tracker/images/tracker.png')
-        self.add_widget(self.img)
-
-        self.active_tooltip = None
-        self.tooltips = []
-
-        self.data = json.loads(pkgutil.get_data(__name__, "data.json").decode())
-
-        """
-        self.marker = ColoredMarker(ox=0, oy=0, osize=30)
-        self.img.add_widget(self.marker)
-        self.img.bind(size=self.marker._update_graphics, pos=self.marker._update_graphics)
-        self.marker._update_graphics()
-        """
-
-        self.bind(size=self._update_overlay, pos=self._update_overlay)
-        Window.bind(mouse_pos=self._update_tooltip)
-        Window.bind(on_mouse_down=self._force_tooltip)
-
     def _force_tooltip(self, window, x, y, *args):
         self._update_tooltip(None, (x, Window.height-y))
 
@@ -74,13 +54,25 @@ class TrackerLayout(Widget):
 
 
     def on_connect(self, ctx):
-        self.img.clear_widgets()
+
+        self.active_tooltip = None
+        self.tooltips = []
+
+        self.data = json.loads(pkgutil.get_data(__name__, "data.json").decode())
+        self.bind(size=self._update_overlay, pos=self._update_overlay)
+        Window.bind(mouse_pos=self._update_tooltip)
+        Window.bind(on_mouse_down=self._force_tooltip)
+
+        self.img = self.load_image('tracker/images/tracker.png')
+        self.add_widget(self.img)
+        self._update_overlay()
 
         self.items = {}
         self.unlocks = {}
         self.regions = {}
         self.tooltips = []
         self.locations = {}
+        self.goals = {}
         self.ctx = ctx
 
         for locid in self.ctx.server_locations:
@@ -94,7 +86,7 @@ class TrackerLayout(Widget):
                 region_name = location_name.split(' Reward ')[0]
                 icon_name = "Reward"
             if "Item #" in location_name:
-                icon_name = "Treasure Room Item"
+                icon_name = "ap_icon"
             if region_name not in self.regions:
                 x = 0
                 y = 0
@@ -144,6 +136,36 @@ class TrackerLayout(Widget):
         self.box_layout = BoxLayout(size_hint=(1, None), orientation='vertical', spacing=5, padding=8)
         self.run_info.add_widget(self.box_layout)
 
+        self.goals_label = Label(text="Goals", height=26, size_hint=(1, None), halign="left")
+        self.goals_label.texture_update() 
+        self.goals_label.size = self.goals_label.texture_size
+        self.box_layout.add_widget(self.goals_label)
+
+        self.goals_box = StackLayout(size_hint=(1, None), spacing=4)
+        self.box_layout.add_widget(self.goals_box)
+
+        for goal in self.ctx.options["goals"]:
+            goal_box = Goal(size=(48,48), size_hint=(None, None))
+            icon = self.load_image(f'tracker/images/{goal} Goal.png')
+            icon.size = (48, 48)
+            icon.texture.min_filter = 'nearest'
+            icon.texture.mag_filter = 'nearest'
+            icon.size_hint=(None, None)
+            icon.color = (0, 0, 0, 1)
+            goal_box.add_widget(icon)
+            self.goals[goal] = goal_box
+            self.goals_box.add_widget(goal_box)
+            goal_box.tooltip_anchor = 53
+            tooltip = TrackerTooltip(padding=(8, 4), size_hint=(None, None))
+            tooltip_label = Label(text=goal, size_hint=(None, None))
+            tooltip_label.texture_update() 
+            tooltip_label.size = tooltip_label.texture_size
+            tooltip.add_widget(tooltip_label)
+            tooltip._recalc_size()
+            tooltip._update_pos()
+            self.tooltips.append((goal_box, tooltip))
+        self.goals_box.do_layout()
+
         self.unlocks_label = Label(text="Unlocks", height=26, size_hint=(1, None), halign="left")
         self.unlocks_label.texture_update() 
         self.unlocks_label.size = self.unlocks_label.texture_size
@@ -182,10 +204,12 @@ class TrackerLayout(Widget):
         self.items_box = BoxLayout(size_hint=(1, None))
         self.box_layout.add_widget(self.items_box)
 
-        items_layout = BoxLayout(size_hint=(1, None), height=0, orientation='vertical')
-        self.items_box.add_widget(items_layout)
         consumables_layout = BoxLayout(size_hint=(1, None), height=0, orientation='vertical')
         self.items_box.add_widget(consumables_layout)
+        items_layout = BoxLayout(size_hint=(1, None), height=0, orientation='vertical')
+        self.items_box.add_widget(items_layout)
+        items_layout_2 = BoxLayout(size_hint=(1, None), height=0, orientation='vertical')
+        self.items_box.add_widget(items_layout_2)
 
         for item in self.data["items"]:
             if item.endswith('Trap'):
@@ -215,13 +239,23 @@ class TrackerLayout(Widget):
                 consumables_layout.add_widget(item_box)
                 consumables_layout.height += 26
             else:
-                items_layout.add_widget(item_box)
-                items_layout.height += 26
-        consumables_layout.add_widget(Widget(height=(items_layout.height - consumables_layout.height)))
-        consumables_layout.height = items_layout.height
-        self.items_box.height = items_layout.height
+                if len(items_layout.children) < 6:
+                    items_layout.add_widget(item_box)
+                    items_layout.height += 26
+                else:
+                    items_layout_2.add_widget(item_box)
+                    items_layout_2.height += 26
+        items_layout.add_widget(Widget(height=(consumables_layout.height - items_layout.height)))
+        items_layout.height = consumables_layout.height
+        items_layout_2.add_widget(Widget(height=(consumables_layout.height - items_layout_2.height)))
+        items_layout_2.height = consumables_layout.height
+        self.items_box.height = consumables_layout.height
 
         self.run_info._update_graphics()
+
+        self.update_reachability("Menu", True)
+        for region in self.regions.values():
+            region._update_color()
 
     def on_item_update(self, items):
         refresh = False
@@ -243,22 +277,15 @@ class TrackerLayout(Widget):
             self.locations[locid].checked = True
             self.locations[locid].region._update_color()
 
+    def on_goals_update(self, goals):
+        for goal, completed in goals.items():
+            if completed:
+                self.goals[goal]._complete()
+
     def on_runinfo_update(self, run_info):
         items = {}
-        for item, amount in run_info["discarded_items"].items():
-            total = f"{item}"
-            tbd = f"{item}_tbd"
-            received = f"{item}_received"
-            if total in items:
-                items[total] += amount
-            else:
-                items[total] = amount
-            if tbd not in items:
-                items[tbd] = 0
-            if received not in items:
-                items[received] = 0
-        for floor in run_info["to_be_distributed"]:
-            for item, amount in floor.items():
+        if isinstance(run_info["discarded_items"], dict):
+            for item, amount in run_info["discarded_items"].items():
                 total = f"{item}"
                 tbd = f"{item}_tbd"
                 received = f"{item}_received"
@@ -266,26 +293,42 @@ class TrackerLayout(Widget):
                     items[total] += amount
                 else:
                     items[total] = amount
-                if tbd in items:
-                    items[tbd] += amount
-                else:
-                    items[tbd] = amount
+                if tbd not in items:
+                    items[tbd] = 0
                 if received not in items:
                     items[received] = 0
-        for item, amount in run_info["received_items"].items():
-            total = f"{item}"
-            tbd = f"{item}_tbd"
-            received = f"{item}_received"
-            if total in items:
-                items[total] += amount
-            else:
-                items[total] = amount
-            if tbd not in items:
-                items[tbd] = 0
-            if received in items:
-                items[received] += amount
-            else:
-                items[received] = amount
+        if isinstance(run_info["to_be_distributed"], list):
+            for floor in run_info["to_be_distributed"]:
+                if isinstance(floor, dict):
+                    for item, amount in floor.items():
+                        total = f"{item}"
+                        tbd = f"{item}_tbd"
+                        received = f"{item}_received"
+                        if total in items:
+                            items[total] += amount
+                        else:
+                            items[total] = amount
+                        if tbd in items:
+                            items[tbd] += amount
+                        else:
+                            items[tbd] = amount
+                        if received not in items:
+                            items[received] = 0
+        if isinstance(run_info["received_items"], dict):
+            for item, amount in run_info["received_items"].items():
+                total = f"{item}"
+                tbd = f"{item}_tbd"
+                received = f"{item}_received"
+                if total in items:
+                    items[total] += amount
+                else:
+                    items[total] = amount
+                if tbd not in items:
+                    items[tbd] = 0
+                if received in items:
+                    items[received] += amount
+                else:
+                    items[received] = amount
 
         for item, amount in items.items():
             if "_" in item:
@@ -354,6 +397,15 @@ class Unlock(BoxLayout):
         self.children[0].color = (1, 1, 1, 1)
         self.unlocked = True
 
+class Goal(BoxLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.completed = False
+
+    def _complete(self, *args):
+        self.children[0].color = (1, 1, 1, 1)
+        self.completed = True
+
 class TrackerTooltip(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -394,12 +446,18 @@ class InfoView(ScrollView):
         self.rect.pos = self.pos
 
         tracker = self.parent.parent
-        total_unlocks = len(self.parent.parent.data["unlocks"].keys())
-        unlocks_per_row = math.floor((self.width - 12) / 36)
-        rows = math.ceil(total_unlocks / unlocks_per_row)
 
-        tracker.unlocks_box.height = rows * 32
-        tracker.box_layout.height = tracker.unlocks_label.height + tracker.unlocks_box.height + tracker.items_label.height + tracker.items_box.height + 31
+        total_unlocks = len(self.parent.parent.data["unlocks"].keys())
+        unlocks_per_row = max(math.floor((self.width - 12) / 36), 1)
+        unlock_rows = math.ceil(total_unlocks / unlocks_per_row)
+        tracker.unlocks_box.height = unlock_rows * 32
+
+        total_goals = len(self.parent.parent.ctx.options["goals"])
+        goals_per_row = max(math.floor((self.width - 12) / 52), 1)
+        goal_rows = math.ceil(total_goals / goals_per_row)
+        tracker.goals_box.height = goal_rows * 52
+
+        tracker.box_layout.height = tracker.goals_label.height + tracker.goals_box.height + tracker.unlocks_label.height + tracker.unlocks_box.height + tracker.items_label.height + tracker.items_box.height + 35
 
 class Location(BoxLayout):
     tracker: TrackerLayout
@@ -500,7 +558,7 @@ class Region(Widget):
             self.right_tri.rgb = (1, 0, 0)
         elif one_green and one_gray and not one_red:
             self.left_tri.rgb = (0, 1, 0)
-            self.right_tri.rgb = (0.3, 0.3, 0.3)
+            self.right_tri.rgb = (0, 1, 0)
         elif one_gray and one_red and not one_green:
             self.left_tri.rgb = (0.3, 0.3, 0.3)
             self.right_tri.rgb = (1, 0, 0)

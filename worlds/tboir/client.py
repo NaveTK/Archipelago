@@ -7,11 +7,12 @@ from enum import Enum
 import json
 import os
 from queue import Queue
+import traceback
 from uuid import uuid4
 import colorama
 
 import ModuleUpdate
-from NetUtils import NetworkItem
+from NetUtils import ClientStatus, NetworkItem
 import settings
 from worlds.tboir import TboiSettings
 ModuleUpdate.update()
@@ -76,13 +77,16 @@ class IsaacContext(CommonContext):
 
             settings.get_settings()["tboir_options"] = self.settings
         except:
+            self.settings.game_folder = None
             self.gui_error("Invalid game directory", "Please select the directory which contains your Binding of Isaac executable.\nUsually located in 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\' called 'The Binding of Isaac Rebirth'.")
             return
 
-        potential_mod_dirs = [
-            name for name in os.listdir(os.path.join(self.settings.game_folder, "mods"))
-            if (name.startswith('the archipelago of isaac') or name.startswith('ap_mod')) and os.path.isdir(os.path.join(os.path.join(self.settings.game_folder, "mods"), name))
-            ]
+        potential_mod_dirs = []
+        if os.path.isdir(os.path.join(self.settings.game_folder, "mods")):
+            potential_mod_dirs = [
+                name for name in os.listdir(os.path.join(self.settings.game_folder, "mods"))
+                if (name.startswith('the archipelago of isaac') or name.startswith('ap_mod')) and os.path.isdir(os.path.join(os.path.join(self.settings.game_folder, "mods"), name))
+                ]
         
         if len(potential_mod_dirs) == 0:
             self.gui_error("Mod not found", "The Archipelago of Isaac mod does not seem to be installed. Please subscribe to the mod on the steam workshop.")
@@ -116,6 +120,9 @@ class IsaacContext(CommonContext):
     async def connection_closed(self):
         await super(IsaacContext, self).connection_closed()
         self.current_state = self.State.DISCONNECTED
+        self.ui.tabs.children[4].trigger_action()
+        self.ui.remove_client_tab(self.ui.tabs.children[0])
+        self.ui.tracker_tab = None
 
     async def shutdown(self):
         await super(IsaacContext, self).shutdown()
@@ -133,19 +140,21 @@ class IsaacContext(CommonContext):
             Utils.async_start(self.send_msgs([
                 {"cmd": "Get", "keys": [f"{self.username}_saveslot",
                                         f"{self.username}_run_info",
+                                        f"{self.username}_goals",
                                         f"{self.username}_session_id"]}]))
             if len(self.locations_scouted) == 0:
                 Utils.async_start(self.send_msgs([
                     {"cmd": "LocationScouts", "locations": [code for code in self.server_locations], "create_as_hint": False}]))
-            self.ui.debug_tab.updateDebug(self)
         if cmd in {"Retrieved"}:
             if f"{self.username}_saveslot" in args["keys"]:
                 if self.stored_data[f"{self.username}_saveslot"] is None:
                     self.set_data(f"{self.username}_saveslot", 0)
             if f"{self.username}_run_info" in args["keys"]:
                 if self.stored_data[f"{self.username}_run_info"] is None:
-                    self.set_data(f"{self.username}_run_info", {})
-                self.ui.debug_tab.updateDebug(self)
+                    self.set_data(f"{self.username}_run_info", {"discarded_items": {}, "to_be_distributed": [], "received_items": {}})
+            if f"{self.username}_goals" in args["keys"]:
+                if self.stored_data[f"{self.username}_goals"] is None:
+                    self.set_data(f"{self.username}_goals", {goal: False for goal in self.options["goals"]})
             if f"{self.username}_session_id" in args["keys"]:
                 if self.stored_data[f"{self.username}_session_id"] is None:
                     self.set_data(f"{self.username}_session_id", str(uuid4().int))
@@ -164,8 +173,7 @@ class IsaacContext(CommonContext):
                 self.ui.tracker_tab.on_item_update(args['items'])
         if cmd in {"RoomUpdate"}:
             if "checked_locations" in args:
-                for ss in self.checked_locations:
-                    pass
+                self.ui.tracker_tab.on_location_update(self.checked_locations)
         if cmd in {"LocationInfo"}:
             if "locations" in args:
                 self.scouted_locations = { l.location: {"item": l.item, "location": l.location, "player": l.player, "flags": l.flags } for l in args["locations"]}
@@ -173,48 +181,17 @@ class IsaacContext(CommonContext):
     def run_gui(self):
         """Import kivy UI system and start running it as self.ui_task."""
         from kvui import GameManager
-        from kivy.uix.label import Label
-        from kivy.uix.boxlayout import BoxLayout
-        from kivy.uix.floatlayout import FloatLayout
-        from kivy.uix.scrollview import ScrollView
-        from worlds.tboir.tracker import TrackerLayout
-        from kivy.core.window import Window
 
         class IsaacManager(GameManager):
             logging_pairs = [
                 ("Client", "Archipelago")
             ]
             base_title = "Archipelago Isaac Client"
-            debug_tab = None
             tracker_tab = None
 
             def build(self):
                 container = super().build()
-
-                scroll_view = ScrollView()
-                self.debug_tab = DebugLayout(size_hint_y=None)
-                scroll_view.add_widget(self.debug_tab)
-                self.add_client_tab("Debug", scroll_view)
-
-                self.tracker_tab = TrackerLayout()
-                self.add_client_tab("Tracker", self.tracker_tab)
-
-                self.tracker_tab.init_base()
                 return container
-
-        class DebugLayout(BoxLayout):
-            def updateDebug(self, ctx: IsaacContext):
-                self.clear_widgets()
-
-                options_text = json.dumps(ctx.options, indent=4, ensure_ascii=False)
-                options= Label(text=options_text)
-                run_info_text = "{}"
-                if f"{ctx.username}_run_info" in ctx.stored_data:
-                    run_info_text = json.dumps(ctx.stored_data[f"{ctx.username}_run_info"], indent=4, ensure_ascii=False)
-                run_info = Label(text=run_info_text)
-                self.add_widget(options)
-                self.add_widget(run_info)
-                self.height=options.font_size*options_text.count('\n')*1.25
 
         self.ui = IsaacManager(self)
         self.ui_task = asyncio.create_task(self.ui.async_run(), name="UI")
@@ -228,6 +205,7 @@ class IsaacContext(CommonContext):
                 payload = {
                     "run_info": self.stored_data[f"{self.username}_run_info"],
                     "session_id": self.stored_data[f"{self.username}_session_id"],
+                    "goals": self.stored_data[f"{self.username}_goals"],
                     "checked_locations": [code for code in self.checked_locations],
                     "missing_locations": [code for code in self.missing_locations],
                     "received_items": [{ "flags": item.flags, "item": item.item, "location": item.location, "player": item.player } for item in self.items_received],
@@ -243,8 +221,8 @@ class IsaacContext(CommonContext):
             self.commands_to_be_sent.put(resp)
         elif c.type == "Set":
             self.set_data(f"{self.username}_{c.payload["key"]}", c.payload["data"])
-            self.ui.debug_tab.updateDebug(self)
             self.ui.tracker_tab.on_runinfo_update(self.stored_data[f"{self.username}_run_info"])
+            self.ui.tracker_tab.on_goals_update(self.stored_data[f"{self.username}_goals"])
         elif c.type == "SendLocations":
             self.ui.tracker_tab.on_location_update(c.payload)
             Utils.async_start(self.check_locations(c.payload))
@@ -254,29 +232,36 @@ class IsaacContext(CommonContext):
     def poll(self):
         if not os.path.isfile(self.save_data_path): return
 
-        data = json.loads(open(self.save_data_path).read())
-        save_data = IsaacContext.SaveData(
-            session_id=data["session_id"],
-            timestamp=data["timestamp"],
-            actor=data["actor"],
-            commands=[IsaacContext.Command(type=c["type"], payload=c["payload"]) for c in data["commands"]]
-        )
+        try:
+            data = json.loads(open(self.save_data_path).read())
+            save_data = IsaacContext.SaveData(
+                session_id=data["session_id"],
+                timestamp=data["timestamp"],
+                actor=data["actor"],
+                commands=[IsaacContext.Command(type=c["type"], payload=c["payload"]) for c in data["commands"]]
+            )
 
-        if save_data.actor != "mod": return
-        if save_data.session_id != "" and save_data.session_id != self.stored_data[f"{self.username}_session_id"]: return
+            if save_data.actor != "mod": return
+            if save_data.session_id != "" and save_data.session_id != self.stored_data[f"{self.username}_session_id"]: return
 
-        for c in save_data.commands:
-            self.process_mod_command(c)
+            for c in save_data.commands:
+                self.process_mod_command(c)
 
-        new_save_data = IsaacContext.SaveData(
-            session_id=self.stored_data[f"{self.username}_session_id"],
-            timestamp=int(time.monotonic() * 1000),
-            actor="client",
-            commands=[self.commands_to_be_sent.get() for _ in range(self.commands_to_be_sent.qsize())]
-        )
-        with open(self.save_data_path, "w") as f:
-            dump = json.dumps(asdict(new_save_data))
-            f.write(dump)
+            new_save_data = IsaacContext.SaveData(
+                session_id=self.stored_data[f"{self.username}_session_id"],
+                timestamp=int(time.monotonic() * 1000),
+                actor="client",
+                commands=[self.commands_to_be_sent.get() for _ in range(self.commands_to_be_sent.qsize())]
+            )
+            with open(self.save_data_path, "w") as f:
+                dump = json.dumps(asdict(new_save_data))
+                f.write(dump)
+
+            if all(self.stored_data[f"{self.username}_goals"].values()) and not self.finished_game:
+                self.finished_game = True
+                Utils.async_start(self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}]))
+        except:
+            pass
 
 async def game_watcher(ctx: IsaacContext):
     while not ctx.exit_event.is_set():
@@ -290,6 +275,7 @@ async def game_watcher(ctx: IsaacContext):
                     and f"{ctx.username}_saveslot" in ctx.stored_data.keys() \
                     and f"{ctx.username}_session_id" in ctx.stored_data.keys() \
                     and f"{ctx.username}_run_info" in ctx.stored_data.keys() \
+                    and f"{ctx.username}_goals" in ctx.stored_data.keys() \
                     and len(ctx.scouted_locations) > 0:
                 while ctx.stored_data[f"{ctx.username}_saveslot"] == 0:
                     logger.info('Enter save slot (1-3):')
@@ -303,14 +289,21 @@ async def game_watcher(ctx: IsaacContext):
                 logger.info(f'Connecting to save slot {ctx.stored_data[f"{ctx.username}_saveslot"]}')
                 ctx.save_data_path = os.path.join(ctx.settings.game_folder, "data", "the archipelago of isaac", f"save{ctx.stored_data[f"{ctx.username}_saveslot"]}.dat")
                 ctx.current_state = ctx.State.CONNECTED
+                
+                from worlds.tboir.tracker import TrackerLayout
+                ctx.ui.tracker_tab = TrackerLayout()
+                ctx.ui.add_client_tab("Tracker", ctx.ui.tracker_tab)
+
                 ctx.ui.tracker_tab.on_connect(ctx)
                 ctx.ui.tracker_tab.on_runinfo_update(ctx.stored_data[f"{ctx.username}_run_info"])
+                ctx.ui.tracker_tab.on_goals_update(ctx.stored_data[f"{ctx.username}_goals"])
                 ctx.ui.tracker_tab.on_location_update(ctx.checked_locations)
                 ctx.ui.tracker_tab.on_item_update(ctx.items_received)
+                ctx.ui.tabs.children[0].trigger_action()
             if ctx.current_state == ctx.State.CONNECTED:
                 ctx.poll()
         except Exception as e:
-            ctx.gui_error("ERROR", e)
+            ctx.gui_error("ERROR", traceback.format_exc())
 
 
 async def main():

@@ -215,7 +215,11 @@
 			"rooms": ["Secret Room", "Super Secret Room", "Boss Room", "Arcade", "Challenge Room", "Curse Room", "Sacrifice Room", "Miniboss Room", "Deal Room"],
 			"connects_to": ["Cathedral", "Sheol", "???", "Chapter 4"],
 			"boss": "Mom's Heart",
-			"requires": {"or": [{"has": "Womb"}, {"has": "We Need To Go Deeper!"}]},
+			"requires": {
+				"or": [
+					{"has": "Womb"},
+					{"has": "We Need To Go Deeper!"}
+					]},
 			"tracker_location": {
                 "x": 935,
                 "y": 345
@@ -253,7 +257,7 @@
             }
 		},
 		"Cathedral": {
-			"rooms": ["Secret Room", "Super Secret Room", "Boss Room", "Arcade", "Challenge Room", "Curse Room", "Sacrifice Room", "Miniboss Room", "Deal Room"],
+			"rooms": ["Secret Room", "Super Secret Room", "Boss Room", "Arcade", "Challenge Room", "Curse Room", "Sacrifice Room", "Miniboss Room"],
 			"connects_to": ["Chest", "Chapter 5"],
 			"boss": "Isaac",
 			"requires": {"has": "Cathedral"},
@@ -263,7 +267,7 @@
             }
 		},
 		"Sheol": {
-			"rooms": ["Secret Room", "Super Secret Room", "Boss Room", "Arcade", "Challenge Room", "Curse Room", "Sacrifice Room", "Miniboss Room", "Deal Room"],
+			"rooms": ["Secret Room", "Super Secret Room", "Boss Room", "Arcade", "Challenge Room", "Curse Room", "Sacrifice Room", "Miniboss Room"],
 			"connects_to": ["Dark Room", "Chapter 5"],
 			"boss": "Satan",
 			"requires": {
@@ -398,8 +402,14 @@
 			"requires": {
 				"or": [
 					{"has": "Mausoleum"},
-					{"has": "Strange Door"}
-					]},
+					{"and": [
+						{"has": "Strange Door"},
+						{"or": [
+							{"has": "The Polaroid"},
+							{"has": "The Negative"}
+						]}
+					]}
+				]},
 			"tracker_location": {
                 "x": 725,
                 "y": 545
@@ -447,7 +457,15 @@
 			"rooms": ["Closet", "Boss Room"],
 			"connects_to": [],
 			"boss": "Beast",
-			"requires": {"has": "Strange Door"},
+			"requires": {
+				"and": [
+					{"has": "Strange Door"},
+					{"or": [
+						{"has": "The Polaroid"},
+						{"has": "The Negative"}
+					]}
+				]
+			},
 			"tracker_location": {
                 "x": 535,
                 "y": 915
