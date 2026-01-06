@@ -1,5 +1,6 @@
 import json
 import pkgutil
+import random
 from typing import Any
 from BaseClasses import CollectionState, Item, ItemClassification, Location, Region
 from Options import Option
@@ -88,7 +89,7 @@ class TboiWorld(World):
             return any(self.rule_from_data(state, x) for x in rule["or"])
         if "and" in rule:
             return all(self.rule_from_data(state, x) for x in rule["and"])
-
+        
     def create_regions(self):
         existing_regions = set()
 
@@ -140,7 +141,7 @@ class TboiWorld(World):
                     for i in range(reward["amount"]):
                         boss_region.add_locations(self.create_location(f'{boss} Reward #{i+1}'), TboiLocation)
                     self.multiworld.regions.append(boss_region)
-                if boss in self.options.goals:
+                if boss in self.goals:
                     boss_region.add_locations(self.create_location(f'Defeat {boss}'), TboiLocation)
 
     
@@ -159,7 +160,7 @@ class TboiWorld(World):
         return items_added
 
     def create_items(self):
-        own_items = len(self.options.goals.value)
+        own_items = len(self.goals)
         for name, unlock in self.data['unlocks'].items():
             if "type" in unlock and unlock["type"] == "alt" and "Alt Path" in self.options.excluded_areas.value: continue
             if "type" in unlock and unlock["type"] == "void" and "The Void" in self.options.excluded_areas.value: continue
@@ -192,7 +193,7 @@ class TboiWorld(World):
 
     def set_rules(self) -> None:
         goal_amount = 0
-        for goal in self.options.goals.value:
+        for goal in self.goals:
             if goal == "Mother" and "Alt Path" in self.options.excluded_areas.value: continue
             if goal == "Delirium" and "The Void" in self.options.excluded_areas.value: continue
             if goal == "Beast" and "Ascend" in self.options.excluded_areas.value: continue
@@ -213,7 +214,6 @@ class TboiWorld(World):
                 "crystal_ball_hint_percentage",
                 "fortune_cookie_hint_percentage",
                 "hint_types_from_fortunes",
-                "goals",
                 "excluded_areas",
                 "additional_item_locations_per_stage",
                 "item_location_percentage",
@@ -230,10 +230,30 @@ class TboiWorld(World):
                 "retain_one_ups_percentage",
                 "exclude_items_as_rewards",
                 "death_link",
-                toggles_as_bools=True)
+                toggles_as_bools=True) 
+                |
+                { "goals": self.goals }
            }
     
     def generate_early(self) -> None:
+        self.goals = []
+        available_bosses = list(self.data["boss_rewards"].keys())
+
+        if "All" in self.options.goals.value:
+            self.goals = available_bosses
+        else:
+            for goal in self.options.goals.value:
+                if goal in available_bosses:
+                    self.goals.append(goal)
+                    available_bosses.remove(goal)
+
+            random.shuffle(available_bosses)
+            for goal in self.options.goals.value:
+                if goal.startswith("Random"):
+                    amount = int(goal.split('-')[1])
+                    for _ in range(amount):
+                        self.goals.append(available_bosses.pop())
+
         re_gen_passthrough = getattr(self.multiworld, "re_gen_passthrough", {})
         if re_gen_passthrough and self.game in re_gen_passthrough:
             # Get the passed through slot data from the real generation

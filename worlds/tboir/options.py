@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 
-from Options import DeathLink, DefaultOnToggle, OptionCounter, OptionSet, Toggle, Range, PerGameCommonOptions
+from Options import DeathLink, DefaultOnToggle, OptionCounter, OptionSet, Range, PerGameCommonOptions
 
 
 class BadRNGProtection(DefaultOnToggle):
     """
     By enabling this, succesfully winning a run unlocks all the room location checks per stage which didn't spawn on all the stages you went through during that run.
     That means, even if a Mini Boss room didn't spawn in the Flooded Caves, you'll still get the unlock if you have been to the Flooded Caves during that run upon finishing the run succesfully.
-    (Stage specific Room Type Locations to be checked this way: Arcade, Challenge Room, Curse Room and Sacrifice Room)
+    (Room Types that can be checked this way: Arcade, Challenge Room, Curse Room and Sacrifice Room)
     """
     display_name = "Bad RNG Protection"
 
@@ -33,7 +33,7 @@ class FortuneCookieHintPercentage(Range):
     """
     Chance for a Fortune Cookie to give a hint.
     """
-    display_name = "Fornue Cookie Hint Percentage"
+    display_name = "Fortune Cookie Hint Percentage"
     range_start = 0
     range_end = 100
     default = 50
@@ -57,7 +57,7 @@ class Goals(OptionSet):
     """
     Set of all bosses you'll have to beat to sucessfully win the game.
     Valid bosses are: ["Mom", "Mom's Heart", "Isaac", "Satan", "Blue Baby", "The Lamb", "Mega Satan", "Boss Rush", "Hush", "Beast", "Mother", "Delirium"]
-    Can also be set to "All" to include all bosses, or "Random#", where # determines the number of random bosses. F.e. "Random3" will select 3 Bosses at random
+    Can also be set to "All" to include all bosses, or "Random-#", where # determines the number of random bosses. For example ["Isaac", "Random-3"] will select Isaac and 3 random other Bosses
     """
     display_name = "Goals"
 
@@ -75,17 +75,17 @@ class Goals(OptionSet):
         "Mother",
         "Delirium",
         "All",
-        "Random1",
-        "Random2",
-        "Random3",
-        "Random4",
-        "Random5",
-        "Random6",
-        "Random7",
-        "Random8",
-        "Random9",
-        "Random10",
-        "Random11"
+        "Random-1",
+        "Random-2",
+        "Random-3",
+        "Random-4",
+        "Random-5",
+        "Random-6",
+        "Random-7",
+        "Random-8",
+        "Random-9",
+        "Random-10",
+        "Random-11"
     })
     default = frozenset({"Mega Satan", "Beast", "Mother", "Delirium"})
 
@@ -241,7 +241,7 @@ class ItemWeights(OptionCounter):
         "Golden Chest Item": 8,
         "Library Item": 1,
         "Planetarium Item": 1,
-        "Red Chest Item": 1,
+        "Red Chest Item": 4,
         "Secret Room Item": 8,
         "Shop Item": 15,
         "Treasure Room Item": 15
@@ -358,13 +358,9 @@ class ExcludeItemsAsRewards(OptionSet):
 
 @dataclass
 class TboiOptions(PerGameCommonOptions):
-    bad_rng_protection: BadRNGProtection
-    fortune_machine_hint_percentage: FortuneMachineHintPercentage
-    crystal_ball_hint_percentage: CrystalBallHintPercentage
-    fortune_cookie_hint_percentage: FortuneCookieHintPercentage
-    hint_types_from_fortunes: HintTypesFromFortunes
     goals: Goals
     excluded_areas: ExcludedAreas
+    bad_rng_protection: BadRNGProtection
     additional_item_locations_per_stage: AdditionalItemLocationsPerStage
     item_location_percentage: ItemLocationPercentage
     additional_boss_rewards: AdditionalBossRewards
@@ -379,4 +375,8 @@ class TboiOptions(PerGameCommonOptions):
     one_ups: OneUps
     retain_one_ups_percentage: RetainOneUpsPercentage
     exclude_items_as_rewards: ExcludeItemsAsRewards
+    fortune_machine_hint_percentage: FortuneMachineHintPercentage
+    crystal_ball_hint_percentage: CrystalBallHintPercentage
+    fortune_cookie_hint_percentage: FortuneCookieHintPercentage
+    hint_types_from_fortunes: HintTypesFromFortunes
     death_link: DeathLink
