@@ -191,7 +191,7 @@ class IsaacContext(CommonContext):
         self.hintable_locations = set({ k: v for k, v in self.scouted_locations.items() if
                                     k not in hinted_locations and (
                                         ("Progression Items" in self.options["hint_types_from_fortunes"] and v["flags"] & 0b001) or
-                                        ("Usefull Items" in self.options["hint_types_from_fortunes"] and v["flags"] & 0b010) or
+                                        ("Useful Items" in self.options["hint_types_from_fortunes"] and v["flags"] & 0b010) or
                                         ("Junk Items" in self.options["hint_types_from_fortunes"] and v["flags"] & 0b000) or
                                         ("Traps" in self.options["hint_types_from_fortunes"] and v["flags"] & 0b100)
                                     )})
