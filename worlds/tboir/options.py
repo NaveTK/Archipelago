@@ -103,6 +103,7 @@ class AdditionalItemLocationsPerStage(OptionCounter):
     """
     Number of available AP Items that occasinally replace regular items.
     Picking up an AP Item is a location check. Once all the checks have been completed no more AP Items will spawn.
+    (Maximum 10 per floor)
     """
     display_name = "Additional Item Locations per Stage"
     valid_keys = frozenset({
