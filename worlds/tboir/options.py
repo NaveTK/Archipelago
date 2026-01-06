@@ -379,3 +379,4 @@ class TboiOptions(PerGameCommonOptions):
     one_ups: OneUps
     retain_one_ups_percentage: RetainOneUpsPercentage
     exclude_items_as_rewards: ExcludeItemsAsRewards
+    death_link: DeathLink

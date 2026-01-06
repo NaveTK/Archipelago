@@ -12,7 +12,7 @@ from uuid import uuid4
 import colorama
 
 import ModuleUpdate
-from NetUtils import ClientStatus, NetworkItem
+from NetUtils import ClientStatus, HintStatus, NetworkItem
 import settings
 from worlds.tboir import TboiSettings
 ModuleUpdate.update()
@@ -62,6 +62,7 @@ class IsaacContext(CommonContext):
     current_state = State.DISCONNECTED
     options = {}
     scouted_locations = {}
+    hintable_locations = {}
 
     def __init__(self, server_address: str | None, password: str | None):
         super(IsaacContext, self).__init__(server_address, password)
@@ -132,32 +133,37 @@ class IsaacContext(CommonContext):
         Utils.async_start(self.send_msgs([
             {"cmd": "Set", "key": key, "want_reply": False, "operations": [{"operation": "replace", "value": value}]}
             ]))
+       
 
     def on_package(self, cmd: str, args: dict):
         if cmd in {"Connected"}:
             self.current_state = self.State.GATHERING_DATA
             self.options = args['slot_data']['options']
+            if self.options["death_link"]:
+                Utils.async_start(self.update_death_link(True))
             Utils.async_start(self.send_msgs([
-                {"cmd": "Get", "keys": [f"{self.username}_saveslot",
-                                        f"{self.username}_run_info",
-                                        f"{self.username}_goals",
-                                        f"{self.username}_session_id"]}]))
+                {"cmd": "Get", "keys": [f"isaac_{self.slot}_saveslot",
+                                        f"isaac_{self.slot}_run_info",
+                                        f"isaac_{self.slot}_goals",
+                                        f"isaac_{self.slot}_session_id"]}]))
             if len(self.locations_scouted) == 0:
                 Utils.async_start(self.send_msgs([
                     {"cmd": "LocationScouts", "locations": [code for code in self.server_locations], "create_as_hint": False}]))
         if cmd in {"Retrieved"}:
-            if f"{self.username}_saveslot" in args["keys"]:
-                if self.stored_data[f"{self.username}_saveslot"] is None:
-                    self.set_data(f"{self.username}_saveslot", 0)
-            if f"{self.username}_run_info" in args["keys"]:
-                if self.stored_data[f"{self.username}_run_info"] is None:
-                    self.set_data(f"{self.username}_run_info", {"discarded_items": {}, "to_be_distributed": [], "received_items": {}})
-            if f"{self.username}_goals" in args["keys"]:
-                if self.stored_data[f"{self.username}_goals"] is None:
-                    self.set_data(f"{self.username}_goals", {goal: False for goal in self.options["goals"]})
-            if f"{self.username}_session_id" in args["keys"]:
-                if self.stored_data[f"{self.username}_session_id"] is None:
-                    self.set_data(f"{self.username}_session_id", str(uuid4().int))
+            if f"isaac_{self.slot}_saveslot" in args["keys"]:
+                if self.stored_data[f"isaac_{self.slot}_saveslot"] is None:
+                    self.set_data(f"isaac_{self.slot}_saveslot", 0)
+            if f"isaac_{self.slot}_run_info" in args["keys"]:
+                if self.stored_data[f"isaac_{self.slot}_run_info"] is None:
+                    self.set_data(f"isaac_{self.slot}_run_info", {"discarded_items": {}, "to_be_distributed": [], "received_items": {}})
+            if f"isaac_{self.slot}_goals" in args["keys"]:
+                if self.stored_data[f"isaac_{self.slot}_goals"] is None:
+                    self.set_data(f"isaac_{self.slot}_goals", {goal: False for goal in self.options["goals"]})
+            if f"isaac_{self.slot}_session_id" in args["keys"]:
+                if self.stored_data[f"isaac_{self.slot}_session_id"] is None:
+                    self.set_data(f"isaac_{self.slot}_session_id", str(uuid4().int))
+            if f"_read_hints_{self.team}_{self.slot}" in args["keys"]:
+                self.update_hints()
 
         if cmd in {"ReceivedItems"}:
             start_index = args["index"]
@@ -174,10 +180,37 @@ class IsaacContext(CommonContext):
         if cmd in {"RoomUpdate"}:
             if "checked_locations" in args:
                 self.ui.tracker_tab.on_location_update(self.checked_locations)
+                self.update_hints()
         if cmd in {"LocationInfo"}:
             if "locations" in args:
-                self.scouted_locations = { l.location: {"item": l.item, "location": l.location, "player": l.player, "flags": l.flags } for l in args["locations"]}
+                self.scouted_locations |= { l.location: {"item": l.item, "location": l.location, "player": l.player, "flags": l.flags } for l in args["locations"]}
+                self.update_hints()
 
+    def update_hints(self):
+        hinted_locations = set([ hint["location"] for hint in self.stored_data[f"_read_hints_{self.team}_{self.slot}"] if hint["finding_player"] == self.slot ]) | self.checked_locations
+        self.hintable_locations = set({ k: v for k, v in self.scouted_locations.items() if
+                                    k not in hinted_locations and (
+                                        ("Progression Items" in self.options["hint_types_from_fortunes"] and v["flags"] & 0b001) or
+                                        ("Usefull Items" in self.options["hint_types_from_fortunes"] and v["flags"] & 0b010) or
+                                        ("Junk Items" in self.options["hint_types_from_fortunes"] and v["flags"] & 0b000) or
+                                        ("Traps" in self.options["hint_types_from_fortunes"] and v["flags"] & 0b100)
+                                    )})
+        if self.current_state == self.State.CONNECTED:
+            cmd = IsaacContext.Command(
+                type = "HintableLocations",
+                payload = list(self.hintable_locations)
+            )
+            self.commands_to_be_sent.put(cmd)
+ 
+    def on_deathlink(self, data):
+        if self.options["death_link"]:
+            cmd = IsaacContext.Command(
+                    type = "Kill",
+                    payload = None
+                )
+            self.commands_to_be_sent.put(cmd)
+        return super().on_deathlink(data)
+    
     def run_gui(self):
         """Import kivy UI system and start running it as self.ui_task."""
         from kvui import GameManager
@@ -203,9 +236,9 @@ class IsaacContext(CommonContext):
             resp = IsaacContext.Command(
                 type = "AllData",
                 payload = {
-                    "run_info": self.stored_data[f"{self.username}_run_info"],
-                    "session_id": self.stored_data[f"{self.username}_session_id"],
-                    "goals": self.stored_data[f"{self.username}_goals"],
+                    "run_info": self.stored_data[f"isaac_{self.slot}_run_info"],
+                    "session_id": self.stored_data[f"isaac_{self.slot}_session_id"],
+                    "goals": self.stored_data[f"isaac_{self.slot}_goals"],
                     "checked_locations": [code for code in self.checked_locations],
                     "missing_locations": [code for code in self.missing_locations],
                     "received_items": [{ "flags": item.flags, "item": item.item, "location": item.location, "player": item.player } for item in self.items_received],
@@ -215,17 +248,31 @@ class IsaacContext(CommonContext):
                     "slot": self.slot,
                     "options": self.options,
                     "scouted_locations": self.scouted_locations,
-                    "hints": self.stored_data[f"_read_hints_{self.team}_{self.slot}"]
+                    "hintable_locations": list(self.hintable_locations)
                 }
             )
             self.commands_to_be_sent.put(resp)
         elif c.type == "Set":
-            self.set_data(f"{self.username}_{c.payload["key"]}", c.payload["data"])
-            self.ui.tracker_tab.on_runinfo_update(self.stored_data[f"{self.username}_run_info"])
-            self.ui.tracker_tab.on_goals_update(self.stored_data[f"{self.username}_goals"])
+            self.set_data(f"isaac_{self.slot}_{c.payload["key"]}", c.payload["data"])
+            self.ui.tracker_tab.on_runinfo_update(self.stored_data[f"isaac_{self.slot}_run_info"])
+            self.ui.tracker_tab.on_goals_update(self.stored_data[f"isaac_{self.slot}_goals"])
         elif c.type == "SendLocations":
             self.ui.tracker_tab.on_location_update(c.payload)
             Utils.async_start(self.check_locations(c.payload))
+        elif c.type == "HintLocations":
+            item = self.scouted_locations[c.payload[0]]
+            state = HintStatus.HINT_UNSPECIFIED
+            if item["flags"] & 0b001:
+                state = HintStatus.HINT_PRIORITY
+            if item["flags"] & 0b010:
+                state = HintStatus.HINT_NO_PRIORITY
+            if item["flags"] & 0b100:
+                state = HintStatus.HINT_AVOID
+            Utils.async_start(self.send_msgs([
+                    {"cmd": "CreateHints", "player": self.slot, "locations": c.payload, "status": state}]))
+        elif c.type == "Died":
+            if self.options["death_link"]:
+                Utils.async_start(self.send_death("Skill Issue"))
         else:
             pass
 
@@ -242,13 +289,13 @@ class IsaacContext(CommonContext):
             )
 
             if save_data.actor != "mod": return
-            if save_data.session_id != "" and save_data.session_id != self.stored_data[f"{self.username}_session_id"]: return
+            if save_data.session_id != "" and save_data.session_id != self.stored_data[f"isaac_{self.slot}_session_id"]: return
 
             for c in save_data.commands:
                 self.process_mod_command(c)
 
             new_save_data = IsaacContext.SaveData(
-                session_id=self.stored_data[f"{self.username}_session_id"],
+                session_id=self.stored_data[f"isaac_{self.slot}_session_id"],
                 timestamp=int(time.monotonic() * 1000),
                 actor="client",
                 commands=[self.commands_to_be_sent.get() for _ in range(self.commands_to_be_sent.qsize())]
@@ -257,7 +304,7 @@ class IsaacContext(CommonContext):
                 dump = json.dumps(asdict(new_save_data))
                 f.write(dump)
 
-            if all(self.stored_data[f"{self.username}_goals"].values()) and not self.finished_game:
+            if all(self.stored_data[f"isaac_{self.slot}_goals"].values()) and not self.finished_game:
                 self.finished_game = True
                 Utils.async_start(self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}]))
         except:
@@ -272,22 +319,22 @@ async def game_watcher(ctx: IsaacContext):
                 ctx.resolve_paths()
 
             if ctx.current_state == ctx.State.GATHERING_DATA \
-                    and f"{ctx.username}_saveslot" in ctx.stored_data.keys() \
-                    and f"{ctx.username}_session_id" in ctx.stored_data.keys() \
-                    and f"{ctx.username}_run_info" in ctx.stored_data.keys() \
-                    and f"{ctx.username}_goals" in ctx.stored_data.keys() \
+                    and f"isaac_{ctx.slot}_saveslot" in ctx.stored_data.keys() \
+                    and f"isaac_{ctx.slot}_session_id" in ctx.stored_data.keys() \
+                    and f"isaac_{ctx.slot}_run_info" in ctx.stored_data.keys() \
+                    and f"isaac_{ctx.slot}_goals" in ctx.stored_data.keys() \
                     and len(ctx.scouted_locations) > 0:
-                while ctx.stored_data[f"{ctx.username}_saveslot"] == 0:
+                while ctx.stored_data[f"isaac_{ctx.slot}_saveslot"] == 0:
                     logger.info('Enter save slot (1-3):')
                     try:
                         slot = int(await ctx.console_input())
                         if slot >= 1 and slot <= 3:
-                            ctx.stored_data[f"{ctx.username}_saveslot"] = slot
-                            ctx.set_data(f"{ctx.username}_saveslot", slot)
+                            ctx.stored_data[f"isaac_{ctx.slot}_saveslot"] = slot
+                            ctx.set_data(f"isaac_{ctx.slot}_saveslot", slot)
                     except:
                         pass
-                logger.info(f'Connecting to save slot {ctx.stored_data[f"{ctx.username}_saveslot"]}')
-                ctx.save_data_path = os.path.join(ctx.settings.game_folder, "data", "the archipelago of isaac", f"save{ctx.stored_data[f"{ctx.username}_saveslot"]}.dat")
+                logger.info(f'Connecting to save slot {ctx.stored_data[f"isaac_{ctx.slot}_saveslot"]}')
+                ctx.save_data_path = os.path.join(ctx.settings.game_folder, "data", "the archipelago of isaac", f"save{ctx.stored_data[f"isaac_{ctx.slot}_saveslot"]}.dat")
                 ctx.current_state = ctx.State.CONNECTED
                 
                 from worlds.tboir.tracker import TrackerLayout
@@ -295,8 +342,8 @@ async def game_watcher(ctx: IsaacContext):
                 ctx.ui.add_client_tab("Tracker", ctx.ui.tracker_tab)
 
                 ctx.ui.tracker_tab.on_connect(ctx)
-                ctx.ui.tracker_tab.on_runinfo_update(ctx.stored_data[f"{ctx.username}_run_info"])
-                ctx.ui.tracker_tab.on_goals_update(ctx.stored_data[f"{ctx.username}_goals"])
+                ctx.ui.tracker_tab.on_runinfo_update(ctx.stored_data[f"isaac_{ctx.slot}_run_info"])
+                ctx.ui.tracker_tab.on_goals_update(ctx.stored_data[f"isaac_{ctx.slot}_goals"])
                 ctx.ui.tracker_tab.on_location_update(ctx.checked_locations)
                 ctx.ui.tracker_tab.on_item_update(ctx.items_received)
                 ctx.ui.tabs.children[0].trigger_action()

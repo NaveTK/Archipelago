@@ -73,9 +73,9 @@ class TboiWorld(World):
     def create_item(self, item: str) -> TboiItem:
         classification = \
                 ItemClassification.progression if item.endswith('Unlock') else \
-                ItemClassification.filler if item.startswith('Random') else \
+                ItemClassification.useful if item.startswith('1-UP') or item.startswith('Angel Deal') or item.startswith('Devil Deal') or item.startswith('Planetarium') else \
                 ItemClassification.trap if item.endswith('Trap') else \
-                ItemClassification.useful
+                ItemClassification.filler
         return TboiItem(item, classification, self.item_name_to_id[item], self.player)
     
     def create_event(self, event: str) -> TboiItem:
@@ -108,8 +108,8 @@ class TboiWorld(World):
                     if "requires" in self.data["rooms"][room]:
                         add_rule(self.get_location(location_name),
                                 lambda state, rule=self.data["rooms"][room]["requires"]: self.rule_from_data(state, rule))
-                        add_item_rule(self.get_location(location_name),
-                                lambda item: item.classification == ItemClassification.progression or item.classification == ItemClassification.useful)
+                        #add_item_rule(self.get_location(location_name),
+                        #        lambda item: item.classification == ItemClassification.progression or item.classification == ItemClassification.useful)
             if name in self.options.additional_item_locations_per_stage.keys():
                 for i in range(self.options.additional_item_locations_per_stage[name]):
                     region.add_locations(self.create_location(f'{name} - Item #{i+1}'))
@@ -229,6 +229,7 @@ class TboiWorld(World):
                 "one_ups",
                 "retain_one_ups_percentage",
                 "exclude_items_as_rewards",
+                "death_link",
                 toggles_as_bools=True)
            }
     

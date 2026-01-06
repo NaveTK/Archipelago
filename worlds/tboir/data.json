@@ -399,17 +399,7 @@
 			"type": "alt",
 			"rooms": ["Treasure Room", "Shop", "Secret Room", "Super Secret Room", "Boss Room", "Arcade", "Challenge Room", "Curse Room", "Sacrifice Room", "Miniboss Room", "Deal Room"],
 			"connects_to": ["Womb", "Utero", "Scarred Womb", "Corpse", "Boss Rush", "Home", "Chapter 3"],
-			"requires": {
-				"or": [
-					{"has": "Mausoleum"},
-					{"and": [
-						{"has": "Strange Door"},
-						{"or": [
-							{"has": "The Polaroid"},
-							{"has": "The Negative"}
-						]}
-					]}
-				]},
+			"requires": {"has": "Mausoleum"},
 			"tracker_location": {
                 "x": 725,
                 "y": 545
