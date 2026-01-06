@@ -41,17 +41,17 @@ class FortuneCookieHintPercentage(Range):
 class HintTypesFromFortunes(OptionSet):
     """
     The type of items you are able to get Hints for through fortunes.
-    Valid types are: ["Progression Items", "Usefull Items", "Junk Items", "Traps"]
+    Valid types are: ["Progression Items", "Useful Items", "Junk Items", "Traps"]
     """
     display_name = "Hint types from Fortunes"
 
     valid_keys = frozenset({
         "Progression Items",
-        "Usefull Items",
+        "Useful Items",
         "Junk Items",
         "Traps"
     })
-    default = frozenset({"Progression Items", "Usefull Items"})
+    default = frozenset({"Progression Items", "Useful Items"})
 
 class Goals(OptionSet):
     """
@@ -319,7 +319,7 @@ class TrapWeights(OptionCounter):
 
 class OneUps(Range):
     """
-    Amount of 1-UPs you can receive during the session. Usefull for balancing out the death link.
+    Amount of 1-UPs you can receive during the session. Useful for balancing out the death link.
     """
     display_name = "1-UPs"
     range_start = 0
