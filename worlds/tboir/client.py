@@ -72,13 +72,13 @@ class IsaacContext(CommonContext):
     def resolve_paths(self):
         try:
             if not self.settings.game_folder or not self.settings.game_folder.endswith("The Binding of Isaac Rebirth"):
-                self.settings.game_folder = None
+                self.settings = TboiSettings()
                 self.gui_error("Invalid game directory", "Please select the directory which contains your Binding of Isaac executable.\nUsually located in 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\' called 'The Binding of Isaac Rebirth'.")
                 return
 
             settings.get_settings()["tboir_options"] = self.settings
         except:
-            self.settings.game_folder = None
+            self.settings = TboiSettings()
             self.gui_error("Invalid game directory", "Please select the directory which contains your Binding of Isaac executable.\nUsually located in 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\' called 'The Binding of Isaac Rebirth'.")
             return
 
