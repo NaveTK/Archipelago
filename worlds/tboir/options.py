@@ -5,8 +5,8 @@ from Options import DeathLink, DefaultOnToggle, OptionCounter, OptionSet, Range,
 
 class BadRNGProtection(DefaultOnToggle):
     """
-    By enabling this, succesfully winning a run unlocks all the room location checks per stage which didn't spawn on all the stages you went through during that run.
-    That means, even if a Mini Boss room didn't spawn in the Flooded Caves, you'll still get the unlock if you have been to the Flooded Caves during that run upon finishing the run succesfully.
+    By enabling this, successfully winning a run unlocks all the room location checks per stage which didn't spawn on all the stages you went through during that run.
+    That means, even if a Mini Boss room didn't spawn in the Flooded Caves, you'll still get the unlock if you have been to the Flooded Caves during that run upon finishing the run successfully.
     (Room Types that can be checked this way: Arcade, Challenge Room, Curse Room and Sacrifice Room)
     """
     display_name = "Bad RNG Protection"
@@ -15,7 +15,7 @@ class FortuneMachineHintPercentage(Range):
     """
     Chance for a Fortune Telling Machine to give a hint.
     """
-    display_name = "Fornue Machine Hint Percentage"
+    display_name = "Fortune Machine Hint Percentage"
     range_start = 0
     range_end = 100
     default = 30
@@ -55,7 +55,7 @@ class HintTypesFromFortunes(OptionSet):
 
 class Goals(OptionSet):
     """
-    Set of all bosses you'll have to beat to sucessfully win the game.
+    Set of all bosses you'll have to beat to successfully win the game.
     Valid bosses are: ["Mom", "Mom's Heart", "Isaac", "Satan", "Blue Baby", "The Lamb", "Mega Satan", "Boss Rush", "Hush", "Beast", "Mother", "Delirium"]
     Can also be set to "All" to include all bosses, or "Random-#", where # determines the number of random bosses. For example ["Isaac", "Random-3"] will select Isaac and 3 random other Bosses
     """
@@ -91,7 +91,7 @@ class Goals(OptionSet):
 
 class ExcludedAreas(OptionSet):
     """
-    Entire areas to exclude from the game. By excluding an area, none of the entrance methods to the area will be able to spawn and neither are locations placed in those areas.
+    Entire areas to exclude from the game. By excluding an area, none of the entrance methods to the area will be able to spawn and no location checks will be placed in those areas.
     Valid areas are: ["The Void", "Ascend", "Alt Path", "Timed Areas"]
     """
     display_name = "Excluded areas"
@@ -101,7 +101,7 @@ class ExcludedAreas(OptionSet):
 
 class AdditionalItemLocationsPerStage(OptionCounter):
     """
-    Number of available AP Items that occasinally replace regular items.
+    Number of available AP Items that occasionally replace regular items.
     Picking up an AP Item is a location check. Once all the checks have been completed no more AP Items will spawn.
     (Maximum 10 per floor)
     """
@@ -169,7 +169,7 @@ class AdditionalItemLocationsPerStage(OptionCounter):
 
 class ItemLocationPercentage(Range):
     """
-    Chance for an item to replaced with an AP item (if there are still AP Item checks avaialble for the current Stage)
+    Chance for an item to be replaced with an AP item (if there are still AP Item checks available for the current Stage)
     Fixed item drops are not replaced, only those that roll a random item from an item pool.
     """
     display_name = "Item Location Percentage"
@@ -252,7 +252,7 @@ class RetainItemsPercentage(Range):
     """
     Fraction of the items you received that are re-given to you on a new run.
     """
-    display_name = "Retain Items percentage"
+    display_name = "Retain Items Percentage"
     range_start = 0
     range_end = 100
     default = 30
@@ -289,7 +289,7 @@ class RetainJunkPercentage(Range):
     """
     Fraction of the pickups you received that are re-given to you on a new run.
     """
-    display_name = "Retain Junk percentage"
+    display_name = "Retain Junk Percentage"
     range_start = 0
     range_end = 100
     default = 10
@@ -331,14 +331,14 @@ class RetainOneUpsPercentage(Range):
     """
     Fraction of the 1-UPs you received that are re-given to you on a new run. (Will always be given immediately and not spread across floors.)
     """
-    display_name = "Retain 1-UPs percentage"
+    display_name = "Retain 1-UPs Percentage"
     range_start = 0
     range_end = 100
     default = 100
     
 class ExcludeItemsAsRewards(OptionSet):
     """
-    Actively harmeful items can be excluded here from being given as a reward to the player.
+    Actively harmful items can be excluded here from being given as a reward to the player.
     Valid items are: ["A Pound of Flesh", "Blood Oath", "Blood Puppy", "Cursed Eye", "Curse of the Tower", "Isaac's Heart", "Kidney Stone", "Missing No", "Shard of Glass", "TMTrainer"]
     """
     display_name = "Exclude items as rewards"
