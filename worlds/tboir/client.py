@@ -120,10 +120,11 @@ class IsaacContext(CommonContext):
 
     async def connection_closed(self):
         await super(IsaacContext, self).connection_closed()
-        self.current_state = self.State.DISCONNECTED
-        self.ui.tabs.children[4].trigger_action()
-        self.ui.remove_client_tab(self.ui.tabs.children[0])
-        self.ui.tracker_tab = None
+        if self.current_state == self.State.CONNECTED:
+            self.current_state = self.State.DISCONNECTED
+            self.ui.tabs.children[4].trigger_action()
+            self.ui.remove_client_tab(self.ui.tabs.children[0])
+            self.ui.tracker_tab = None
 
     async def shutdown(self):
         await super(IsaacContext, self).shutdown()
@@ -139,6 +140,8 @@ class IsaacContext(CommonContext):
         if cmd in {"Connected"}:
             self.current_state = self.State.GATHERING_DATA
             self.options = args['slot_data']['options']
+            if "deathlink" in self.options:
+                self.options["death_link"] = self.options["deathlink"]
             if self.options["death_link"]:
                 Utils.async_start(self.update_death_link(True))
             Utils.async_start(self.send_msgs([
@@ -203,12 +206,13 @@ class IsaacContext(CommonContext):
             self.commands_to_be_sent.put(cmd)
  
     def on_deathlink(self, data):
-        if self.options["death_link"]:
-            cmd = IsaacContext.Command(
-                    type = "Kill",
-                    payload = None
-                )
-            self.commands_to_be_sent.put(cmd)
+        if self.current_state == self.State.CONNECTED:
+            if self.options["death_link"]:
+                cmd = IsaacContext.Command(
+                        type = "Kill",
+                        payload = None
+                    )
+                self.commands_to_be_sent.put(cmd)
         return super().on_deathlink(data)
     
     def run_gui(self):
@@ -262,12 +266,13 @@ class IsaacContext(CommonContext):
         elif c.type == "HintLocations":
             item = self.scouted_locations[c.payload[0]]
             state = HintStatus.HINT_UNSPECIFIED
-            if item["flags"] & 0b001:
-                state = HintStatus.HINT_PRIORITY
-            if item["flags"] & 0b010:
-                state = HintStatus.HINT_NO_PRIORITY
-            if item["flags"] & 0b100:
-                state = HintStatus.HINT_AVOID
+            if item["player"] == self.slot:
+                if item["flags"] & 0b001:
+                    state = HintStatus.HINT_PRIORITY
+                if item["flags"] & 0b010:
+                    state = HintStatus.HINT_NO_PRIORITY
+                if item["flags"] & 0b100:
+                    state = HintStatus.HINT_AVOID
             Utils.async_start(self.send_msgs([
                     {"cmd": "CreateHints", "player": self.slot, "locations": c.payload, "status": state}]))
         elif c.type == "Died":
