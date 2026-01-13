@@ -63,6 +63,7 @@ class IsaacContext(CommonContext):
     options = {}
     scouted_locations = {}
     hintable_locations = {}
+    save_corruption_timer = 0
 
     def __init__(self, server_address: str | None, password: str | None):
         super(IsaacContext, self).__init__(server_address, password)
@@ -167,7 +168,9 @@ class IsaacContext(CommonContext):
                     self.set_data(f"isaac_{self.slot}_session_id", str(uuid4().int))
             if f"_read_hints_{self.team}_{self.slot}" in args["keys"]:
                 self.update_hints()
-
+        if cmd in {"SetReply"}:
+            if f"_read_hints_{self.team}_{self.slot}" == args["key"]:
+                self.update_hints()
         if cmd in {"ReceivedItems"}:
             start_index = args["index"]
             if start_index != len(self.items_received) and self.current_state == self.State.CONNECTED:
@@ -246,7 +249,7 @@ class IsaacContext(CommonContext):
                     "checked_locations": [code for code in self.checked_locations],
                     "missing_locations": [code for code in self.missing_locations],
                     "received_items": [{ "flags": item.flags, "item": item.item, "location": item.location, "player": item.player } for item in self.items_received],
-                    "item_names": { slot.game: { code: name  for code, name in self.item_names[slot.game].items() } for slot in self.slot_info.values() },
+                    "item_names": { game: { code: name  for code, name in self.item_names[game].items() if any(scout["item"] == code and self.slot_info[scout["player"]].game == game for scout in self.scouted_locations.values()) } for game in set(slot.game for slot in self.slot_info.values())},
                     "location_names": { code: name for code, name in self.location_names[self.game].items() },
                     "slot_info": {k: {"name": v.name, "game": v.game} for k, v in self.slot_info.items()},
                     "slot": self.slot,
@@ -294,7 +297,6 @@ class IsaacContext(CommonContext):
             )
 
             if save_data.actor != "mod": return
-            if save_data.session_id != "" and save_data.session_id != self.stored_data[f"isaac_{self.slot}_session_id"]: return
 
             for c in save_data.commands:
                 self.process_mod_command(c)
@@ -313,7 +315,20 @@ class IsaacContext(CommonContext):
                 self.finished_game = True
                 Utils.async_start(self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}]))
         except:
-            pass
+            if self.save_corruption_timer > 10:
+                self.save_corruption_timer = 0
+
+                new_save_data = IsaacContext.SaveData(
+                    session_id="",
+                    timestamp=int(time.monotonic() * 1000),
+                    actor="client",
+                    commands=[]
+                )
+                with open(self.save_data_path, "w") as f:
+                    dump = json.dumps(asdict(new_save_data))
+                    f.write(dump)
+            else:
+                self.save_corruption_timer += 1
 
 async def game_watcher(ctx: IsaacContext):
     while not ctx.exit_event.is_set():

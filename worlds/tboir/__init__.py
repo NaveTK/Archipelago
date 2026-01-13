@@ -105,7 +105,7 @@ class TboiWorld(World):
                     region.add_locations(self.create_location(location_name), TboiLocation)
                     if self.data["rooms"][room]["rng"]:
                         add_item_rule(self.get_location(location_name),
-                                lambda item: item.classification != ItemClassification.progression)
+                                lambda item: (item.classification & ItemClassification.progression) == 0)
                     if "requires" in self.data["rooms"][room]:
                         add_rule(self.get_location(location_name),
                                 lambda state, rule=self.data["rooms"][room]["requires"]: self.rule_from_data(state, rule))
