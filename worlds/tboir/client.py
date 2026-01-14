@@ -249,7 +249,7 @@ class IsaacContext(CommonContext):
                     "checked_locations": [code for code in self.checked_locations],
                     "missing_locations": [code for code in self.missing_locations],
                     "received_items": [{ "flags": item.flags, "item": item.item, "location": item.location, "player": item.player } for item in self.items_received],
-                    "item_names": { game: { code: name  for code, name in self.item_names[game].items() if any(scout["item"] == code and self.slot_info[scout["player"]].game == game for scout in self.scouted_locations.values()) } for game in set(slot.game for slot in self.slot_info.values())},
+                    "item_names": { game: { code: name  for code, name in self.item_names[game].items() if game == self.game or any(scout["item"] == code and self.slot_info[scout["player"]].game == game for scout in self.scouted_locations.values()) } for game in set(slot.game for slot in self.slot_info.values())},
                     "location_names": { code: name for code, name in self.location_names[self.game].items() },
                     "slot_info": {k: {"name": v.name, "game": v.game} for k, v in self.slot_info.items()},
                     "slot": self.slot,
