@@ -18,7 +18,7 @@
 
 1. Open the Steam Workshop page for the mod linked above
 2. Click **Subscribe**
-3. Downloading the tboir.apworld linked above
+3. Download the tboir.apworld linked above
 4. Double click to install it
 
 ## Create a Config (.yaml) File
