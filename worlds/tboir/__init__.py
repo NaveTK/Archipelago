@@ -58,6 +58,7 @@ class TboiWorld(World):
     nightmares!
     """
     game = "The Binding of Isaac Repentance"
+    web = TboiWeb()
     options_dataclass = TboiOptions
     options: TboiOptions
     topology_present = True
