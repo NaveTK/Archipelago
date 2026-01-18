@@ -150,6 +150,8 @@ class TboiWorld(World):
         total_weights = 0
         for weight in items.values():
             total_weights += weight
+        if total_weights == 0:
+            return 0
         item_factor = 1.0 / total_weights * amount
 
         for item, weight in items.items():
@@ -252,7 +254,18 @@ class TboiWorld(World):
                 if goal.startswith("Random"):
                     amount = int(goal.split('-')[1])
                     for _ in range(amount):
-                        self.goals.append(available_bosses.pop())
+                        if len(available_bosses):
+                            self.goals.append(available_bosses.pop())
+
+        for excluded_area in self.options.excluded_areas.value:
+            for name, region in self.data["regions"].items():
+                if "type" in region and "boss" in region:
+                    if region["type"] == "alt" and excluded_area == "Alt Path" or \
+                        region["type"] == "void" and excluded_area == "The Void" or \
+                        region["type"] == "timed" and excluded_area == "Timed Areas" or \
+                        region["type"] == "ascend" and excluded_area == "Ascend":
+                        if region["boss"] in self.goals:
+                            self.goals.remove(region["boss"])
 
         re_gen_passthrough = getattr(self.multiworld, "re_gen_passthrough", {})
         if re_gen_passthrough and self.game in re_gen_passthrough:
