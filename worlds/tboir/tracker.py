@@ -20,7 +20,8 @@ from worlds.tboir.client import IsaacContext
 class TrackerLayout(Widget):
     ctx: IsaacContext
             
-    def load_image(self, filename):
+    def load_image(self, filename: str):
+        filename = filename.replace('???', 'Hush')
         image_file_data = pkgutil.get_data(__name__, filename)
         if not image_file_data:
             raise FileNotFoundError(f"{__name__=} {filename=}")

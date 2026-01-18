@@ -2,7 +2,7 @@ import json
 import pkgutil
 import random
 from typing import Any
-from BaseClasses import CollectionState, Item, ItemClassification, Location, Region
+from BaseClasses import CollectionState, Item, ItemClassification, Location, Region, Tutorial
 from Options import Option
 from Utils import visualize_regions
 import settings
@@ -11,7 +11,7 @@ from worlds.generic.Rules import add_item_rule, add_rule, forbid_item
 from .locations import location_list
 from .items import item_list
 from .options import TboiOptions
-from worlds.AutoWorld import World
+from worlds.AutoWorld import WebWorld, World
 
 def launch_client():
     from . import client
@@ -23,6 +23,16 @@ components.append(Component("Isaac Client",
                             icon="isaac"))
 
 icon_paths["isaac"] = f"ap:{__name__}/icons/isaac.png"
+
+class TboiWeb(WebWorld):
+    tutorials = [Tutorial(
+        "Multiworld Setup Guide",
+        "A guide to playing The Binding of Isaac Repentance.",
+        "English",
+        "setup_en.md",
+        "setup/en",
+        ["NaveTK"]
+    )]
 
 class TboiLocation(Location):
     game = "The Binding of Isaac Repentance"
