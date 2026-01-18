@@ -260,7 +260,7 @@ class IsaacContext(CommonContext):
             )
             self.commands_to_be_sent.put(resp)
         elif c.type == "Set":
-            self.set_data(f"isaac_{self.slot}_{c.payload["key"]}", c.payload["data"])
+            self.set_data(f"isaac_{self.slot}_{c.payload['key']}", c.payload['data'])
             self.ui.tracker_tab.on_runinfo_update(self.stored_data[f"isaac_{self.slot}_run_info"])
             self.ui.tracker_tab.on_goals_update(self.stored_data[f"isaac_{self.slot}_goals"])
         elif c.type == "SendLocations":
@@ -354,7 +354,7 @@ async def game_watcher(ctx: IsaacContext):
                     except:
                         pass
                 logger.info(f'Connecting to save slot {ctx.stored_data[f"isaac_{ctx.slot}_saveslot"]}')
-                ctx.save_data_path = os.path.join(ctx.settings.game_folder, "data", "the archipelago of isaac", f"save{ctx.stored_data[f"isaac_{ctx.slot}_saveslot"]}.dat")
+                ctx.save_data_path = os.path.join(ctx.settings.game_folder, "data", "the archipelago of isaac", f"save{ctx.stored_data[f'isaac_{ctx.slot}_saveslot']}.dat")
                 ctx.current_state = ctx.State.CONNECTED
                 
                 from worlds.tboir.tracker import TrackerLayout
