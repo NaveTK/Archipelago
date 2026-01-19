@@ -141,8 +141,31 @@ class IsaacContext(CommonContext):
         if cmd in {"Connected"}:
             self.current_state = self.State.GATHERING_DATA
             self.options = args['slot_data']['options']
-            if "deathlink" in self.options:
-                self.options["death_link"] = self.options["deathlink"]
+            if "goal_amount" not in self.options:
+                self.options["goal_amount"] = 0
+            if "rng_rooms" not in self.options:
+                self.options["rng_rooms"] = 1
+            if "ultra_secret_room" not in self.options:
+                self.options["ultra_secret_room"] = 3
+            if "error_room" not in self.options:
+                self.options["error_room"] = 3
+            if "crawl_space" not in self.options:
+                self.options["crawl_space"] = 3
+            if "planetarium" not in self.options:
+                self.options["planetarium"] = 3
+            if "floor_variations" not in self.options:
+                self.options["floor_variations"] = True
+            if "death_link_severity" not in self.options:
+                self.options["death_link_severity"] = 1
+            if "progressive_mapping_upgrades" not in self.options:
+                self.options["progressive_mapping_upgrades"] = False
+            if "permanent_stat_upgrades" not in self.options:
+                self.options["permanent_stat_upgrades"] = 0
+            if "start_out_nerfed" not in self.options:
+                self.options["start_out_nerfed"] = 0
+
+            if self.options["goal_amount"] == 0 or self.options["goal_amount"] > len(self.options["goals"]):
+                self.options["goal_amount"] = len(self.options["goals"])
             if self.options["death_link"]:
                 Utils.async_start(self.update_death_link(True))
             Utils.async_start(self.send_msgs([
@@ -311,7 +334,12 @@ class IsaacContext(CommonContext):
                 dump = json.dumps(asdict(new_save_data))
                 f.write(dump)
 
-            if all(self.stored_data[f"isaac_{self.slot}_goals"].values()) and not self.finished_game:
+            completed_goals = 0
+            for completed in self.stored_data[f"isaac_{self.slot}_goals"].values():
+                if completed:
+                    completed_goals += 1
+
+            if completed_goals >= self.options["goal_amount"] and not self.finished_game:
                 self.finished_game = True
                 Utils.async_start(self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}]))
         except:
