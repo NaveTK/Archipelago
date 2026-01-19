@@ -37,7 +37,7 @@ class IsaacContext(CommonContext):
 
     save_data_path: str = ""
     mod_viable: bool = False
-    client_version = Utils.Version(1,0,0)
+    client_version = Utils.Version(2,0,0)
 
     class State(Enum):
         DISCONNECTED = 1
@@ -208,7 +208,8 @@ class IsaacContext(CommonContext):
                 self.ui.tracker_tab.on_item_update(args['items'])
         if cmd in {"RoomUpdate"}:
             if "checked_locations" in args:
-                self.ui.tracker_tab.on_location_update(self.checked_locations)
+                if self.ui.tracker_tab:
+                    self.ui.tracker_tab.on_location_update(self.checked_locations)
                 self.update_hints()
         if cmd in {"LocationInfo"}:
             if "locations" in args:
@@ -334,14 +335,15 @@ class IsaacContext(CommonContext):
                 dump = json.dumps(asdict(new_save_data))
                 f.write(dump)
 
-            completed_goals = 0
-            for completed in self.stored_data[f"isaac_{self.slot}_goals"].values():
-                if completed:
-                    completed_goals += 1
+            if self.current_state == self.State.CONNECTED:
+                completed_goals = 0
+                for completed in self.stored_data[f"isaac_{self.slot}_goals"].values():
+                    if completed:
+                        completed_goals += 1
 
-            if completed_goals >= self.options["goal_amount"] and not self.finished_game:
-                self.finished_game = True
-                Utils.async_start(self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}]))
+                if completed_goals >= self.options["goal_amount"] and not self.finished_game:
+                    self.finished_game = True
+                    Utils.async_start(self.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}]))
         except:
             if self.save_corruption_timer > 10:
                 self.save_corruption_timer = 0
