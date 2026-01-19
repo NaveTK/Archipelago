@@ -247,7 +247,7 @@ class TrackerLayout(Widget):
                     "Permanent Speed Up": 0.15,
                     "Permanent Luck Up": 1.00
                 }
-                self.items[item] = Label(text=f"{(-self.ctx.options["start_out_nerfed"] * stats[item]):+.2f}", valign="center", size_hint=(None, 1), markup = True)
+                self.items[item] = Label(text=f"{(-self.ctx.options['start_out_nerfed'] * stats[item]):+.2f}", valign="center", size_hint=(None, 1), markup = True)
             else:
                 self.items[item] = Label(text="0 (0)", valign="center", size_hint=(None, 1), markup = True)
             self.items[item].texture_update() 
