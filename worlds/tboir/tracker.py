@@ -20,14 +20,14 @@ from worlds.tboir.client import IsaacContext
 class TrackerLayout(Widget):
     ctx: IsaacContext
             
-    def load_image(self, filename: str):
+    def load_image(self, filename: str, ext_: str = 'png'):
         filename = filename.replace('???', 'Hush')
         image_file_data = pkgutil.get_data(__name__, filename)
         if not image_file_data:
             raise FileNotFoundError(f"{__name__=} {filename=}")
         data = io.BytesIO(image_file_data)
         return Image(
-            texture=CoreImage(data, ext="png").texture,
+            texture=CoreImage(data, ext=ext_).texture,
             fit_mode="contain"
         )
 
@@ -64,7 +64,7 @@ class TrackerLayout(Widget):
         Window.bind(mouse_pos=self._update_tooltip)
         Window.bind(on_mouse_down=self._force_tooltip)
 
-        self.img = self.load_image('tracker/images/tracker.png')
+        self.img = self.load_image('tracker/images/tracker.jpg', 'jpg')
         self.add_widget(self.img)
         self._update_overlay()
 

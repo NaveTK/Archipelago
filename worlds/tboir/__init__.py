@@ -1,6 +1,5 @@
 import json
 import pkgutil
-import random
 from typing import Any
 from BaseClasses import CollectionState, Item, ItemClassification, Location, Region, Tutorial
 from Options import Option
@@ -302,7 +301,7 @@ class TboiWorld(World):
                     self.goals.append(goal)
                     available_bosses.remove(goal)
 
-            random.shuffle(available_bosses)
+            self.random.shuffle(available_bosses)
             for goal in self.options.goals.value:
                 if goal.startswith("Random"):
                     amount = int(goal.split('-')[1])
@@ -311,7 +310,7 @@ class TboiWorld(World):
                             self.goals.append(available_bosses.pop())
 
         for excluded_area in self.options.excluded_areas.value:
-            for name, region in self.data["regions"].items():
+            for _, region in self.data["regions"].items():
                 if "type" in region and "boss" in region:
                     if region["type"] == "alt" and excluded_area == "Alt Path" or \
                         region["type"] == "void" and excluded_area == "The Void" or \
@@ -319,6 +318,9 @@ class TboiWorld(World):
                         region["type"] == "ascend" and excluded_area == "Ascend":
                         if region["boss"] in self.goals:
                             self.goals.remove(region["boss"])
+        
+        if len(self.goals) == 0:
+            self.goals = ['Mom']
 
         re_gen_passthrough = getattr(self.multiworld, "re_gen_passthrough", {})
         if re_gen_passthrough and self.game in re_gen_passthrough:

@@ -197,3 +197,5 @@ _speedups.html
 Thumbs.db
 [Dd]esktop.ini
 /data
+fuzz.py
+fuzz_output/*
