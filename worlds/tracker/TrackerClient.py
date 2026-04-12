@@ -1494,7 +1494,8 @@ def explain(ctx: TrackerGameContext, dest_name: str):
         return
     current_world = ctx.tracker_core.get_current_world()
     assert current_world
-    state = ctx.updateTracker().state
+    tracker_struct = ctx.updateTracker()
+    state = tracker_struct.state
     if not state: return
 
     if hasattr(current_world,"explain_rule"):
@@ -1502,6 +1503,11 @@ def explain(ctx: TrackerGameContext, dest_name: str):
         if returned_json:
             ctx.ui.print_json(returned_json)
             return
+        elif tracker_struct.glitches_state is not None: #if this is None don't bother
+            returned_json = current_world.explain_rule(dest_name,tracker_struct.glitches_state)
+            if returned_json:
+                ctx.ui.print_json(returned_json)
+                return
 
     from Utils import get_intended_text
     location_names = set(ctx.tracker_core.multiworld.regions.location_cache[ctx.tracker_core.player_id])
@@ -1549,18 +1555,27 @@ def get_logical_path(ctx: TrackerGameContext, dest_name: str):
         logger.error("Player YAML not installed or Generator failed")
         ctx.set_page(f"Check Player YAMLs for error; Tracker {UT_VERSION} for AP version {__version__}")
         return
+    if not ctx.ui:
+        logger.error("No UI, i'm not converting this back to prints, sorry")
+        return
     relevent_region = None
     relevent_location = None
+    tracker_struct = ctx.updateTracker()
     state = None
     current_world = ctx.tracker_core.get_current_world()
     assert current_world
 
     if hasattr(current_world,"get_logical_path"):
-        state = ctx.updateTracker().state
+        state = tracker_struct.state
         returned_json = current_world.get_logical_path(dest_name,state)
         if returned_json:
             ctx.ui.print_json(returned_json)
             return
+        elif tracker_struct.glitches_state is not None: #if this is None don't bother
+            returned_json = current_world.get_logical_path(dest_name,tracker_struct.glitches_state)
+            if returned_json:
+                ctx.ui.print_json(returned_json)
+                return
 
     from Utils import get_intended_text
     location_names = set(ctx.tracker_core.multiworld.regions.location_cache[ctx.tracker_core.player_id])
@@ -1572,16 +1587,26 @@ def get_logical_path(ctx: TrackerGameContext, dest_name: str):
     dest_name = result
     if dest_name in location_names:
         location = ctx.tracker_core.multiworld.get_location(dest_name, ctx.tracker_core.player_id)
-        state = ctx.updateTracker().state
+        state = tracker_struct.state
         if not state: return
         if location.can_reach(state):
             relevent_region = location.parent_region
             relevent_location = location
+        elif tracker_struct.glitches_state and location.can_reach(tracker_struct.glitches_state):
+            relevent_region = location.parent_region
+            relevent_location = location
+            state = tracker_struct.glitches_state
+            ctx.ui.print_json([{"type":"text","text":"using "},{"type":"color","color":"yellow","text":"Glitches:"}])
     elif dest_name in region_names:
         relevent_region = ctx.tracker_core.multiworld.get_region(dest_name,ctx.tracker_core.player_id)
-        state = ctx.updateTracker().state
+        state = tracker_struct.state
         if not state: return
-        if not relevent_region.can_reach(state):
+        if relevent_region.can_reach(state):
+            pass #it's easier to write this stack like this
+        elif tracker_struct.glitches_state and relevent_region.can_reach(tracker_struct.glitches_state):
+            state = tracker_struct.glitches_state
+            ctx.ui.print_json([{"type":"text","text":"using "},{"type":"color","color":"yellow","text":"Glitches:"}])
+        else: #all else fails, we need to give up
             relevent_region = None
     else:
         logger.error(response)
