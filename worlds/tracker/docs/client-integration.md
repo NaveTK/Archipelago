@@ -46,38 +46,53 @@ if gui_enabled:
 
 ## Calling UT's tracker engine directly
 
-This one is a bit stranger because UT is built off of client code that doesn't need a reason to run if there is no connection, but the functionality is fully there still. 
-Here's an example that instantiates the ctx object without a connection, runs generation, and then picks the correct player id from UT's internal multiworld.
-Then with the ctx created you can check which locations are in logic by:
-1. Setting ctx.missing_locations to the location IDs to be checked
-1. Filling ctx.items_received to be the NetworkItem representation of items received (Note: only the id will be checked by UT so that's why a single value tuple is valid in this example)
-1. Running updateTracker() on the ctx
-1. checking ctx.locations_available for the avaliable location IDs
+Thanks to a recent refactor, calling UT as a library has become easier.
 
+Be making a new instance of the TrackerCore, assuming you provide it with the expected information in the expected order, you can get access to UT's logic tracking methods without the need for a network connection
 
 ```py
-from worlds.tracker.TrackerClient import TrackerGameContext, updateTracker
+from worlds.tracker.TrackerCore import TrackerCore
+import logging
 
+# Making some constants
+slot_name = "qwintBug"
+game = "Hollow Knight"
+slot = 1
+team = 1
+print_list = False
+print_count = False
+logger = logging.getLogger("Client")
 
-def get_tracker_ctx(name):
-    ctx = TrackerGameContext("", "", no_connection=True)
-    ctx.run_generator()
+# logger is a logging.Logger used for messaging
+# print_list and print_count are used for CLI implementations and should likely be set to False always
+tracker_core = TrackerCore(logger,print_list, print_count)
+# Initial UT gen
+tracker_core.run_generator(None, None)
+# get the class of the world, if you're tracking your own world you can probally just reference that
+connected_cls = AutoWorld.AutoWorldRegister.world_types.get(game)
+# Set the slot parameters to track
+tracker_core.set_slot_params(game,slot,slot_name,team)
+# Interpret slot data + regen if needed
+tracker_core.initalize_tracker_core(connected_cls,slot_data)
 
-    ctx.player_id = ctx.launch_multiworld.world_name_lookup[name]
-    return ctx
+# At this point the tracker core has been fully initalized 
 
+# Set the list of locations to check for logic
+tracker_core.set_missing_locations(set([16777360, 16777370, 16777410]))
+# Set the list of items recieved
+# This part is annoying still as Tracker Core still depends on the NetworkItem format
+items = [16777224, 16777227, 16777289]
+#                                     id  ,loc,player,flags
+tracker_core.set_items_received(set([(item,-1 ,-1    ,0    ) for item in items]))
+# you can set hints here but it's not imporant unless you like the color blue in the output format
+# tracker_core.update_hints()
 
-def get_in_logic(ctx, items=[], locations=[]):
-    ctx.items_received = [(item,) for item in items]  # to account for the list being ids and not Items
-    ctx.missing_locations = locations
-    updateTracker(ctx)
-    return ctx.locations_available
+# Now you can actually ask tracker_core what the expected logic is
+updateTracker_ret = tracker_core.updateTracker()
 
+# Check UT's __init__.py for the class definition of the CurrentTrackerState type
 
-name = "qwintBug"
-ctx = get_tracker_ctx(name)
-print(get_in_logic(ctx, items=[16777224, 16777227, 16777289], locations=[16777360, 16777370, 16777410]))
-
+print(updateTracker_ret.in_logic_locations)
 # [16777370, 16777410]
 ```
 
