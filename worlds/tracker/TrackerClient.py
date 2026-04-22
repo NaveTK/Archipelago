@@ -1556,8 +1556,7 @@ def explain(ctx: TrackerGameContext, dest_name: str):
     parent_region = None
     location = None
     if dest_name in location_names:
-        dest_id = current_world.location_name_to_id[dest_name]
-        if dest_id not in ctx.server_locations:
+        if dest_name in current_world.location_name_to_id and current_world.location_name_to_id[dest_name] not in ctx.server_locations:
             logger.error("Location not found")
             return
         location = ctx.tracker_core.multiworld.get_location(dest_name, ctx.tracker_core.player_id)
