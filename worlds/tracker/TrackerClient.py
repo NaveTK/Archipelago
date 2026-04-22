@@ -72,7 +72,9 @@ class TrackerCommandProcessor(ClientCommandProcessor):
 
     def get_help_text(self) -> str:
         sReturn = super().get_help_text() #get the normal response
-        sReturn += self.ctx.get_help_text()
+        new_text = self.ctx.get_help_text()
+        if new_text:
+            sReturn += "\n\n"+new_text
 
         return sReturn
 
