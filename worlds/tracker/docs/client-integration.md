@@ -139,4 +139,15 @@ This script requires a `slots.txt` that contains each slot name on it's own line
 
 ## Adding In-Logic Callbacks
 
-To be filled out later
+For clients that have a desire to "poll" the tracker stats, this causes problems as every time a client runs updateTracker a lot of rules get called and that can take some time (even if it's faster then most humans will notice)
+
+The better solution for this problem is to use the callback registers that UT provides to get automatically notified when there is an update
+
+UT provides the following registers
+
+* set_callback : Called with the current in logic locations
+* set_region_callback : Called with the current in logic regions
+* set_events_callback : Called with the current in logic event location names
+* set_glitches_callback : Called with the current in logic locations that are only in logic with the "Glitches" state
+
+All of these functions must be provided with a function (that will be called with the appropriate parameter) that takes in a list of strings (currently expects to return a bool but that isn't used at the moment)
