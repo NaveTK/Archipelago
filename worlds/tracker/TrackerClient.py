@@ -67,6 +67,12 @@ def get_ut_color(color: str)->str:
 class TrackerCommandProcessor(ClientCommandProcessor):
     ctx: "TrackerGameContext"
 
+    def get_help_text(self) -> str:
+        sReturn = super().get_help_text() #get the normal response
+        sReturn += self.ctx.get_help_text()
+
+        return sReturn
+
     @mark_raw
     def _cmd_inventory(self, filter_text: str = ""):
         """Print the list of current items in the inventory"""
@@ -1485,8 +1491,24 @@ class TrackerGameContext(CommonContext):
         }
         persistent_store("universal_tracker", self._persistent_key, data)
 
+    def get_help_text(self) -> str:
+        import inspect
+        current_world = self.tracker_core.get_current_world()
+        if not current_world:
+            return ""
+        sReturn = ""
+        if hasattr(current_world,"explain_rule"):
+            docstring = inspect.getdoc(current_world.explain_rule)
+            if docstring:
+                sReturn += f"explain overrides:\n    {'\n    '.join(docstring.split('\n'))}"
+        if hasattr(current_world,"get_logical_path"):
+            docstring = inspect.getdoc(current_world.get_logical_path)
+            if docstring:
+                if sReturn:
+                    sReturn += "\n"
+                sReturn += f"get_logical_path overrides:\n    {'\n    '.join(docstring.split('\n'))}"
 
-
+        return sReturn
 
 
 def load_json(pack, path):
