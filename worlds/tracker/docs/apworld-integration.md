@@ -157,6 +157,19 @@ For all of these overrides, if the world returns None it will be defaulted to th
             return None
 ```
 
+### Explain Path
+
+There is a fourth much less powerful, but still useful override that UT allows worlds to define, `explain_path`. This will be given an *entrance* and a state and be asked how to format it for the default `get_logical_path` implementation
+
+```python
+    def explain_path(self, entrance: Entrance, state: CollectionState) -> list[JSONMessagePart]:
+        l_return = [{"type":"color","color":"green","text":entrance.name},{"type":"text","text":" -> "}]
+        l_return.extend(entrance.access_rule.explain_json(state))
+        return l_return
+```
+
+Unlike the other overrides this one has *two* different special return values, if the function returns None the entrance is skipped in the pathing, if it returns a non-None falsy the normal printing is used
+
 ## Custom Sorting
 
 UT allows worlds to define a custom sorting method that can be used in place of UT's default sorting methods when the user sets their `sorting_method` to `apworld` in host.yaml. This is also the default value, so users will get this benefit by default if you implement it. (If you don't, UT will fall back to sorting based on the existing label.) 
