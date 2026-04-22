@@ -58,8 +58,11 @@ def get_ut_color(color: str)->str:
         hinted_out_of_logic: ClassVar[str] = StringProperty("")
         hinted_glitched: ClassVar[str] = StringProperty("")
         excluded: ClassVar[str] = StringProperty("")
+        excluded_glitched: ClassVar[str] = StringProperty("")
         unconnected: ClassVar[str] = StringProperty("")
         error: ClassVar[str] = StringProperty("")
+        default: ClassVar[str] = StringProperty("")
+        ut_status: ClassVar[str] = StringProperty("")
     if not hasattr(get_ut_color,"utTextColor"):
         get_ut_color.utTextColor = UTTextColor()
     return str(getattr(get_ut_color.utTextColor,color,"DD00FF"))
@@ -325,6 +328,7 @@ class TrackerGameContext(CommonContext):
     use_split = True
     re_gen_passthrough = None
     local_items: list[NetworkItem] = []
+    waiting_on_entrances = False
 
     _auto_tab = True
 
@@ -465,9 +469,7 @@ class TrackerGameContext(CommonContext):
                     status = "impassable"
                 for coord in relevent_coords:
                     coord.update_status(loc.name, status)
-        for entrance in updateTracker_ret.unconnected_entrances:
-            self.log_to_tab("[color="+get_ut_color("unconnected")+"]"+entrance.name+"[/color]",False) #keep these at the bottom
-        if self.quit_after_update:
+        if self.quit_after_update and not self.waiting_on_entrances:
             name = self.player_names[self.slot]
             if self.print_count:
                 logger.error(f"Game: {self.game} | Slot Name : {name} | In logic locations : {len(updateTracker_ret.in_logic_locations)}")
@@ -855,7 +857,7 @@ class TrackerGameContext(CommonContext):
             def addLine(self, line: str, sort: bool = False):
                 self.data.append({"text": line})
                 if sort:
-                    self.data.sort(key=lambda e: e["text"])
+                    logging.warning("Sorting in TrackerClient is deprecated.")
 
         class ApLocationIcon(ApAsyncImage):
             pass
@@ -1357,6 +1359,7 @@ class TrackerGameContext(CommonContext):
                         self.defered_entrance_datastorage_keys = []
                     else:
                         self.set_notify(*self.defered_entrance_datastorage_keys)
+                        self.waiting_on_entrances = True
                 else:
                     self.defered_entrance_datastorage_keys = []
 
@@ -1387,11 +1390,11 @@ class TrackerGameContext(CommonContext):
                             self.update_location_icon_coords()
                 if self.defered_entrance_datastorage_keys:
                     if "key" in args and args["key"] in self.defered_entrance_datastorage_keys:
-                            self.update_defered_entrances(args["key"])
+                        self.waiting_on_entrances = False
+                        self.update_defered_entrances([args["key"]])
                     elif "keys" in args:
-                        for key in self.defered_entrance_datastorage_keys:
-                            if key in args["keys"]:
-                                self.update_defered_entrances(key)
+                        self.waiting_on_entrances = False
+                        self.update_defered_entrances([key for key in self.defered_entrance_datastorage_keys if key in args["keys"]])
             elif cmd == 'LocationInfo':
                 if not (self.items_handling & 0b010):
                     self.update_tracker_items()
@@ -1414,9 +1417,10 @@ class TrackerGameContext(CommonContext):
                 self.location_icon.size = (self.ui.loc_icon_size, self.ui.loc_icon_size)
                 self.location_icon.pos = (x,y)
 
-    def update_defered_entrances(self,key):
-        if self.defered_entrance_callback and key:
-            self.defered_entrance_callback(key,self.stored_data.get(key,None))
+    def update_defered_entrances(self, keys: list[str]):
+        if self.defered_entrance_callback and keys:
+            for key in keys:
+                self.defered_entrance_callback(key,self.stored_data.get(key,None))
             self.updateTracker()
 
     async def disconnect(self, allow_autoreconnect: bool = False):
