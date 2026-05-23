@@ -437,7 +437,7 @@ class TrackerCore():
         for item_name, item_flags, item_loc, item_player in [(item_id_to_name[item.item],item.flags,item.location, item.player) for item in self.tracker_items_received if item.item > 0] + [(name,ItemClassification.progression,-1,-1) for name in self.manual_items]:
             try:
                 world_item = self.multiworld.create_item(item_name, self.player_id)
-                if item_loc>0 and item_player == self.slot and item_loc in location_id_to_name:
+                if item_loc>0 and item_player == self.slot and item_loc in location_id_to_name and location_id_to_name[item_loc] in self.multiworld.regions.location_cache[self.player_id]:
                     world_item.location = self.multiworld.get_location(location_id_to_name[item_loc],self.player_id)
                 world_item.classification = world_item.classification | item_flags
                 state.collect(world_item, True)
