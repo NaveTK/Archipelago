@@ -387,7 +387,7 @@ class TrackerGameContext(CommonContext):
         self.map_id = None
         self.defered_entrance_datastorage_keys = []
         self.defered_entrance_callback = None
-        self.tracker_core = TrackerCore.TrackerCore(logger,print_list,print_count)
+        self.tracker_core = TrackerCore(logger,print_list,print_count)
         self.tracker_core.set_set_page(self.set_page)
         self.tracker_core.set_log_to_tab(self.log_to_tab)
         self.tracker_core.set_clear_page(self.clear_page)
