@@ -22,8 +22,6 @@ try:
 except ImportError:
     gui_enabled = not sys.stdout or "--nogui" not in sys.argv #if we fail to find, just guess it ourselves
 
-from . import TrackerCore
-
 from Generate import main as GMain, mystery_argparse
 
 if TYPE_CHECKING:
