@@ -164,7 +164,7 @@ class UTMapTabData:
     location_setting_key: str
     """Data storage key used to determine where to place the location indicator"""
 
-    location_icon_coords: Callable[[int, Any], tuple[int,int,str]|None]
+    location_icon_coords: Callable[[int, Any], tuple[int,int,str]|list[tuple[int,int,str]]|None]
     """Function used to convert between the map and the value in data storage into coords (or none to hide it) the return is [x, y, override path string]"""
 
     def __init__(
