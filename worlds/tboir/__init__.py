@@ -70,11 +70,6 @@ class TboiWorld(World):
                            id, name in enumerate(location_list(data), 1)}
         
     ut_can_gen_without_yaml = True
-    tracker_world = {
-        "map_page_folder": "tracker",
-        "map_page_maps": "maps/maps.json",
-        "map_page_locations": "locations/locations.json"
-    }
 
     def create_location(self, location: str) -> dict[str, int : None]:
         id = self.location_name_to_id[location] if location in self.location_name_to_id.keys() else None

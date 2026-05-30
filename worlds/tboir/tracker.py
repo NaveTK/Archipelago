@@ -6,15 +6,12 @@ import pkgutil
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, Triangle
 from kivy.uix.label import Label
-from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.image import Image, CoreImage
 from kivy.uix.widget import Widget
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.stacklayout import StackLayout
 
-from NetUtils import NetworkItem
-from kvui import HoverBehavior
 from worlds.tboir.client import IsaacContext
 
 class TrackerLayout(Widget):

@@ -271,7 +271,7 @@
             }
 		},
 		"Cathedral": {
-			"rooms": ["Secret Room", "Super Secret Room", "Boss Room", "Arcade", "Challenge Room", "Curse Room", "Sacrifice Room", "Miniboss Room"],
+			"rooms": ["Secret Room", "Super Secret Room", "Boss Room", "Challenge Room", "Curse Room", "Sacrifice Room", "Miniboss Room"],
 			"connects_to": ["Chest", "Chapter 5"],
 			"boss": "Isaac",
 			"requires": {"has": "Cathedral"},
@@ -281,7 +281,7 @@
             }
 		},
 		"Sheol": {
-			"rooms": ["Secret Room", "Super Secret Room", "Boss Room", "Arcade", "Challenge Room", "Curse Room", "Sacrifice Room", "Miniboss Room"],
+			"rooms": ["Secret Room", "Super Secret Room", "Boss Room", "Challenge Room", "Curse Room", "Sacrifice Room", "Miniboss Room"],
 			"connects_to": ["Dark Room", "Chapter 5"],
 			"boss": "Satan",
 			"requires": {
@@ -405,7 +405,17 @@
 		"The Escape": {
 			"type": "alt",
 			"rooms": ["Knife Piece"],
-			"requires": {"has": "Knife Pieces"},
+			"requires": {
+				"and": [
+					{
+						"or": [
+							{"has": "Downpour"},
+							{"has": "Dross"}
+						]
+					},
+					{"has": "Knife Pieces"}
+				]
+			},
 			"tracker_location": {
                 "x": 605,
                 "y": 545
