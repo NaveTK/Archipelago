@@ -1542,7 +1542,11 @@ def explain_more(ctx: TrackerGameContext, argument: str):
     if hasattr(current_world, "explain_more"):
         returned_json = current_world.explain_more(argument, state)
         if returned_json:
-            ctx.ui.print_json(returned_json)
+            if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
+                ctx.ui.print_json(returned_json)
+            else:
+                for message in returned_json:
+                    ctx.ui.print_json(message)
             return
         logger.info("Nothing to explain")
     logger.error("Current world to track doesn't support command /explain_more")
@@ -1563,12 +1567,20 @@ def explain(ctx: TrackerGameContext, dest_name: str):
     if hasattr(current_world,"explain_rule"):
         returned_json = current_world.explain_rule(dest_name,state)
         if returned_json:
-            ctx.ui.print_json(returned_json)
+            if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
+                ctx.ui.print_json(returned_json)
+            else:
+                for message in returned_json:
+                    ctx.ui.print_json(message)
             return
         elif tracker_struct.glitches_state is not None: #if this is None don't bother
             returned_json = current_world.explain_rule(dest_name,tracker_struct.glitches_state)
             if returned_json:
-                ctx.ui.print_json(returned_json)
+                if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
+                    ctx.ui.print_json(returned_json)
+                else:
+                    for message in returned_json:
+                        ctx.ui.print_json(message)
                 return
 
     from Utils import get_intended_text
@@ -1630,12 +1642,20 @@ def get_logical_path(ctx: TrackerGameContext, dest_name: str):
         state = tracker_struct.state
         returned_json = current_world.get_logical_path(dest_name,state)
         if returned_json:
-            ctx.ui.print_json(returned_json)
+            if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
+                ctx.ui.print_json(returned_json)
+            else:
+                for message in returned_json:
+                    ctx.ui.print_json(message)
             return
         elif tracker_struct.glitches_state is not None: #if this is None don't bother
             returned_json = current_world.get_logical_path(dest_name,tracker_struct.glitches_state)
             if returned_json:
-                ctx.ui.print_json(returned_json)
+                if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
+                    ctx.ui.print_json(returned_json)
+                else:
+                    for message in returned_json:
+                        ctx.ui.print_json(message)
                 return
 
     from Utils import get_intended_text
@@ -1701,7 +1721,11 @@ def get_logical_path(ctx: TrackerGameContext, dest_name: str):
                         if returned_json is None:
                             continue
                         if returned_json:
-                            ctx.ui.print_json(returned_json)
+                            if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
+                                ctx.ui.print_json(returned_json)
+                            else:
+                                for message in returned_json:
+                                    ctx.ui.print_json(message)
                             continue
                     returned_json = [{"type":"color","color":"blue","text":v}]
                     if hasattr(ent.access_rule,"explain_json"):
