@@ -285,6 +285,11 @@ class TrackerCommandProcessor(ClientCommandProcessor):
             if self.ctx.tracker_core.launch_multiworld is not None:
                 known_slots = [f"{slot_name} ({self.ctx.tracker_core.launch_multiworld.worlds[slot_id].game})" for slot_name, slot_id in self.ctx.tracker_core.launch_multiworld.world_name_lookup.items() if self.ctx.tracker_core.launch_multiworld.worlds[slot_id].game != "Archipelago"]
                 logger.error(f"Known slots = [{', '.join(known_slots)}]")
+            current_world = self.ctx.tracker_core.get_current_world()
+            if current_world:
+                version = getattr(current_world,"world_version",None)
+                if version:
+                    logger.error(f"World reports version = {version}")
         from worlds import failed_world_loads
         if failed_world_loads:
             logger.error(f"Worlds that failed to load [{', '.join(failed_world_loads)}]")
