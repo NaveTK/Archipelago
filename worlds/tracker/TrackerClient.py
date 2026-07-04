@@ -387,7 +387,7 @@ class TrackerGameContext(CommonContext):
         self.quit_after_update = print_list or print_count
         self.print_list = print_list
         self.print_count = print_count
-        self.location_icon = None
+        self.location_icons = []
         self.root_pack_path = None
         self.map_id = None
         self.defered_entrance_datastorage_keys = []
@@ -1054,7 +1054,7 @@ class TrackerGameContext(CommonContext):
                     self.color_4="#"+get_ut_color("collected")
 
         class VisualTracker(BoxLayout):
-            location_icon: ApLocationIcon
+            location_icons: list[ApLocationIcon]
 
             def load_coords(self, coords: dict[tuple, tuple[list[int], int | None]], defered_coords: dict[tuple, tuple[list[str], int | None]],
                             ldefered_coords: dict[tuple, tuple[list[str], int | None]], use_split, default_loc_size: int = 65) \
@@ -1083,9 +1083,26 @@ class TrackerGameContext(CommonContext):
                     self.ids.location_canvas.add_widget(temp_loc)
                     for event_name in sections:
                         ldeferredDict[event_name].append(temp_loc)
-                self.ids.location_canvas.add_widget(self.location_icon)
+                self.location_icons = []
                 return returnDict, deferredDict, ldeferredDict
 
+            def update_location_icon_widgets(self, ctx: TrackerGameContext, location_icons: list[tuple[int, int, str]]):
+                #I could just clear all icon widgets and recreate them every time one changes, probably not a big performance loss tbh,
+                #but reusing the existing widgets on changes and only adding/removing when necessary seems like the more proper way
+
+                for i, (x, y, ref) in enumerate(location_icons):
+                    if i < len(self.location_icons):
+                        self.location_icons[i].source = f"{ctx.root_pack_path}/{ref}"
+                        self.location_icons[i].pos = (x, y)
+                    else:
+                        location_icon = ApLocationIcon(source=f"{ctx.root_pack_path}/{ref}", pos=(x, y), size=(ctx.ui.loc_icon_size, ctx.ui.loc_icon_size))
+                        self.ids.location_canvas.add_widget(location_icon)
+                        self.location_icons.append(location_icon)
+
+                if len(self.location_icons) > len(location_icons):
+                    for icon in self.location_icons[len(location_icons):]:
+                        self.ids.location_canvas.remove_widget(icon)
+                    del self.location_icons[len(location_icons):]
 
         try:
             tracker = TrackerLayout(orientation="vertical")
@@ -1114,10 +1131,9 @@ class TrackerGameContext(CommonContext):
             tracker.add_widget(tracker_view)
 
             self.tracker_page = tracker_view
-            self.location_icon = ApLocationIcon()
+            self.location_icons = []
 
             map_content = VisualTracker()
-            map_content.location_icon = self.location_icon
             self.map_page_coords_func = map_content.load_coords
             if self.gen_error is not None:
                 for line in self.gen_error.split("\n"):
@@ -1134,6 +1150,7 @@ class TrackerGameContext(CommonContext):
             if value:
                 if not test:
                     test.append(self.add_client_tab("Map Page", map_content))
+                    self.ctx.map_page = map_content
             else:
                 if test:
                     map_tab = test.pop()
@@ -1161,7 +1178,6 @@ class TrackerGameContext(CommonContext):
             loc_icon_size = NumericProperty(20)
             loc_border = NumericProperty(5)
             enable_map = BooleanProperty(False)
-            iconSource = StringProperty("")
             current_map = StringProperty("")
             auto_tab = BooleanProperty(True)
             base_title = f"Tracker {UT_VERSION} for AP version"  # core appends ap version so this works
@@ -1418,15 +1434,19 @@ class TrackerGameContext(CommonContext):
 
     def update_location_icon_coords(self):
         icon_key = self.tracker_world.location_setting_key
-        temp_ret = self.tracker_world.location_icon_coords(self.map_id,self.stored_data.get(icon_key, ""))
-        if temp_ret:
-            (x,y,ref) = temp_ret #should be a 3-tuple
-            if x < 0 or y < 0:
-                self.location_icon.size = (0,0)
-            else:
-                self.ui.iconSource = f"{self.root_pack_path}/{ref}"
-                self.location_icon.size = (self.ui.loc_icon_size, self.ui.loc_icon_size)
-                self.location_icon.pos = (x,y)
+        temp_rets = self.tracker_world.location_icon_coords(self.map_id,self.stored_data.get(icon_key, ""))
+
+        self.location_icons.clear()
+        if temp_rets:
+            if type(temp_rets) != list: #If it's the old callback that just returns a single tuple, we just put it in a single item list
+                temp_rets = [temp_rets]
+            for temp_ret in temp_rets:
+                (x,y,ref) = temp_ret #should be a 3-tuple
+                if x >= 0 and y >= 0:
+                    self.location_icons.append((x,y,ref))
+        if self.map_page:
+            self.map_page.update_location_icon_widgets(self, self.location_icons)
+            
 
     def update_defered_entrances(self, keys: list[str]):
         if self.defered_entrance_callback and keys:
