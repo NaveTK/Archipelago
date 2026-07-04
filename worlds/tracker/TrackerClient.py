@@ -1738,12 +1738,20 @@ def get_logical_path(ctx: TrackerGameContext, dest_name: str):
                         returned_json.extend(ent.access_rule.explain_json(state))
                     ctx.ui.print_json(returned_json)
             if relevent_location:
+                if hasattr(current_world,"explain_spot"):
+                    returned_json = current_world.explain_spot(relevent_location,state)
+                    if returned_json:
+                        if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
+                            ctx.ui.print_json(returned_json)
+                        else:
+                            for message in returned_json:
+                                ctx.ui.print_json(message)
+                        return
                 returned_json = [{"type":"text","text":"->"},{"type":"color","color":"green","text":relevent_location.name}]
                 if hasattr(relevent_location.access_rule,"explain_json"):
                     returned_json.append({"type":"text","text":":\n    "})
                     returned_json.extend(relevent_location.access_rule.explain_json(state))
                 ctx.ui.print_json(returned_json)
-        
         else:
             logger.info(f"{dest_name} not in logic")
 
