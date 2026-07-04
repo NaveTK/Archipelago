@@ -289,7 +289,7 @@ class TrackerCommandProcessor(ClientCommandProcessor):
             if current_world:
                 version = getattr(current_world,"world_version",None)
                 if version:
-                    logger.error(f"World reports version = {version}")
+                    logger.error(f"Local World reports version = {version}")
         from worlds import failed_world_loads
         if failed_world_loads:
             logger.error(f"Worlds that failed to load [{', '.join(failed_world_loads)}]")
