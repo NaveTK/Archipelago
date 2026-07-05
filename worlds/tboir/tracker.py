@@ -169,7 +169,7 @@ class TrackerLayout(FloatLayout):
             if len(characters) > 0:
                 characters_box = StackLayout(size=(extra_cols*16, 48), size_hint=(None, None), orientation='tb-lr', spacing=0)
                 for character in characters:
-                    char_icon = self.load_image(f'tracker/images/{character}.png')
+                    char_icon = self.load_image(f'tracker/images/{character.replace("???", "Blue Baby")}.png')
                     char_icon.size = (16, 16)
                     char_icon.texture.min_filter = 'nearest'
                     char_icon.texture.mag_filter = 'nearest'
