@@ -31,11 +31,17 @@ class IsaacClientCommandProcessor(ClientCommandProcessor):
         self.output(f"Syncing items.")
         self.ctx.syncing = True
 
-    def _cmd_saveslot(self):
-        """Change the save slot you're connecting."""
+    def _cmd_savefile(self, slot = ""):
+        """
+        Change the save file you're connected to (1-3).
+        """
         if (self.ctx.current_state == self.ctx.State.CONNECTED):
-            self.ctx.set_data(f"isaac_{self.ctx.team}_{self.ctx.slot}_saveslot", 0)
-            self.ctx.disconnect(True)
+            if not slot.isdigit() or int(slot) not in {1, 2, 3}:
+                self.output("Invalid save slot. Must be 1, 2, or 3.")
+                return
+            self.ctx.set_data(f"isaac_{self.ctx.team}_{self.ctx.slot}_saveslot", slot)
+            logger.info(f'Connecting to save slot {self.ctx.stored_data[f"isaac_{self.ctx.team}_{self.ctx.slot}_saveslot"]}')
+            self.ctx.save_data_path = os.path.join(self.ctx.settings.game_folder, "data", "the archipelago of isaac", f"save{self.ctx.stored_data[f'isaac_{self.ctx.team}_{self.ctx.slot}_saveslot']}.dat")
         else:
             self.output("Not connected to a game.")
 
@@ -43,7 +49,7 @@ class IsaacClientCommandProcessor(ClientCommandProcessor):
         """Toggle DeathLink on or off."""
         if (self.ctx.current_state == self.ctx.State.CONNECTED):
             self.ctx.options["death_link"] = not self.ctx.options["death_link"]
-            self.set_data(f"isaac_{self.ctx.team}_{self.ctx.slot}_deathlink", self.ctx.options["death_link"])
+            self.ctx.set_data(f"isaac_{self.ctx.team}_{self.ctx.slot}_deathlink", self.ctx.options["death_link"])
             Utils.async_start(self.ctx.update_death_link(self.ctx.options["death_link"]))
             self.output(f"DeathLink {'enabled' if self.ctx.options['death_link'] else 'disabled'}.")
         else:
@@ -95,15 +101,15 @@ class IsaacContext(CommonContext):
 
     def resolve_paths(self):
         try:
-            if not self.settings.game_folder or not self.settings.game_folder.endswith("The Binding of Isaac Rebirth"):
+            if not self.settings.game_folder or not os.path.exists(os.path.join(self.settings.game_folder, "isaac-ng.exe")):
                 self.settings = TboiSettings()
-                self.gui_error("Invalid game directory", "Please select the directory which contains your Binding of Isaac executable.\nUsually located in 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\' called 'The Binding of Isaac Rebirth'.")
+                self.gui_error("Invalid game directory", "Please select the directory which contains your Binding of Isaac executable.\nYou can find the directory by right-clicking the game in Steam and selecting 'Manage' > 'Browse Local Files'.")
                 return
 
             settings.get_settings()["tboir_options"] = self.settings
         except:
             self.settings = TboiSettings()
-            self.gui_error("Invalid game directory", "Please select the directory which contains your Binding of Isaac executable.\nUsually located in 'C:\\Program Files (x86)\\Steam\\steamapps\\common\\' called 'The Binding of Isaac Rebirth'.")
+            self.gui_error("Invalid game directory", "Please select the directory which contains your Binding of Isaac executable.\nYou can find the directory by right-clicking the game in Steam and selecting 'Manage' > 'Browse Local Files'.")
             return
 
         potential_mod_dirs = []
@@ -166,6 +172,10 @@ class IsaacContext(CommonContext):
             self.options = args['slot_data']['options']
             if "goal_amount" not in self.options:
                 self.options["goal_amount"] = 0
+            if "character_goals" not in self.options:
+                self.options["character_goals"] = 0
+            if "exclude_characters" not in self.options:
+                self.options["exclude_characters"] = []
             if "rng_rooms" not in self.options:
                 self.options["rng_rooms"] = 1
             if "ultra_secret_room" not in self.options:
@@ -176,12 +186,22 @@ class IsaacContext(CommonContext):
                 self.options["crawl_space"] = 3
             if "planetarium" not in self.options:
                 self.options["planetarium"] = 3
+            if "planetarium_chapter_four" not in self.options:
+                self.options["planetarium_chapter_four"] = True
+            if "trapdoor_logic" not in self.options:
+                self.options["trapdoor_logic"] = True
+            if "error_room_logic" not in self.options:
+                self.options["error_room_logic"] = True
+            if "sacrifice_room_logic" not in self.options:
+                self.options["sacrifice_room_logic"] = False
             if "floor_variations" not in self.options:
                 self.options["floor_variations"] = True
             if "death_link_severity" not in self.options:
                 self.options["death_link_severity"] = 1
             if "progressive_mapping_upgrades" not in self.options:
                 self.options["progressive_mapping_upgrades"] = False
+            if "progressive_inventory_upgrades" not in self.options:
+                self.options["progressive_inventory_upgrades"] = False
             if "permanent_stat_upgrades" not in self.options:
                 self.options["permanent_stat_upgrades"] = 0
             if "start_out_nerfed" not in self.options:
@@ -213,7 +233,7 @@ class IsaacContext(CommonContext):
                     self.set_data(f"isaac_{self.team}_{self.slot}_run_info", {"discarded_items": {}, "to_be_distributed": [], "received_items": {}})
             if f"isaac_{self.team}_{self.slot}_goals" in args["keys"]:
                 if self.stored_data[f"isaac_{self.team}_{self.slot}_goals"] is None:
-                    self.set_data(f"isaac_{self.team}_{self.slot}_goals", {goal: False for goal in self.options["goals"]})
+                    self.set_data(f"isaac_{self.team}_{self.slot}_goals", {goal.split('|')[0]: False for goal in self.options["goals"]})
             if f"isaac_{self.team}_{self.slot}_session_id" in args["keys"]:
                 if self.stored_data[f"isaac_{self.team}_{self.slot}_session_id"] is None:
                     self.set_data(f"isaac_{self.team}_{self.slot}_session_id", str(uuid4().int))
@@ -298,6 +318,7 @@ class IsaacContext(CommonContext):
                     "run_info": self.stored_data[f"isaac_{self.team}_{self.slot}_run_info"],
                     "session_id": self.stored_data[f"isaac_{self.team}_{self.slot}_session_id"],
                     "goals": self.stored_data[f"isaac_{self.team}_{self.slot}_goals"],
+                    "goal_characters": {goal.split('|')[0]: goal.split('|')[1:] for goal in self.options["goals"]},
                     "checked_locations": [code for code in self.checked_locations],
                     "missing_locations": [code for code in self.missing_locations],
                     "received_items": [{ "flags": item.flags, "item": item.item, "location": item.location, "player": item.player } for item in self.items_received],
@@ -404,7 +425,7 @@ async def game_watcher(ctx: IsaacContext):
                     and f"isaac_{ctx.team}_{ctx.slot}_goals" in ctx.stored_data.keys() \
                     and len(ctx.scouted_locations) > 0:
                 while ctx.stored_data[f"isaac_{ctx.team}_{ctx.slot}_saveslot"] == 0:
-                    logger.info('Enter save slot (1-3):')
+                    logger.info('Enter save file you\'re playing on (1-3):')
                     try:
                         slot = int(await ctx.console_input())
                         if slot >= 1 and slot <= 3:
@@ -426,6 +447,9 @@ async def game_watcher(ctx: IsaacContext):
                 ctx.ui.tracker_tab.on_location_update(ctx.checked_locations)
                 ctx.ui.tracker_tab.on_item_update(ctx.items_received)
                 ctx.ui.tabs.children[0].trigger_action()
+
+                if ctx.ui._app_window.size == (800, 600):
+                    ctx.ui._app_window.size = (1080, 600)
             if ctx.current_state == ctx.State.CONNECTED:
                 ctx.poll()
         except Exception as e:

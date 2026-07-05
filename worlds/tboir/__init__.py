@@ -6,8 +6,8 @@ from Options import Option
 import settings
 from worlds.LauncherComponents import Component, Type, launch_subprocess, icon_paths, components
 from worlds.generic.Rules import add_item_rule, add_rule
-from .locations import location_list
-from .items import item_list
+from .locations import location_list, location_group_list
+from .items import item_list, item_group_list
 from .options import TboiOptions
 from worlds.AutoWorld import WebWorld, World
 
@@ -66,8 +66,10 @@ class TboiWorld(World):
 
     item_name_to_id = {name: id for
                        id, name in enumerate(item_list(data), 1)}
+    item_name_groups = item_group_list(data)
     location_name_to_id = {name: id for
                            id, name in enumerate(location_list(data), 1)}
+    location_name_groups = location_group_list(data)
         
     ut_can_gen_without_yaml = True
 
@@ -88,7 +90,12 @@ class TboiWorld(World):
     
     def rule_from_data(self, state: CollectionState, rule):
         if "has" in rule:
-            return state.has(f'{rule["has"]} Unlock', self.player)
+            unlock, *conditions = rule["has"].split('&')
+            if (len(conditions) > 0):
+                for condition in conditions:
+                    if not self.options.__dict__[condition].value:
+                        return False
+            return unlock == '' or state.has(f'{unlock} Unlock', self.player)
         if "or" in rule:
             return any(self.rule_from_data(state, x) for x in rule["or"])
         if "and" in rule:
@@ -105,29 +112,36 @@ class TboiWorld(World):
             if "variant_of" in floor and not self.options.floor_variations: continue
             region = Region(name, self.player, self.multiworld)
             if "rooms" in floor:
-                for room_name in floor["rooms"]:
+                for room_condition in floor["rooms"]:
+                    skip_room = False
+                    room_name, *conditions = room_condition.split('&')
+                    if (len(conditions) > 0):
+                        for condition in conditions:
+                            if not self.options.__dict__[condition].value:
+                                skip_room = True
+                    if skip_room: continue
                     room = self.data["rooms"][room_name]
                     if "type" in room and room["type"] == "rng" and self.options.rng_rooms.value == 0: continue
-                    if "type" in room and room["type"] == "shovel" and self.options.crawl_space.value == 0: continue
-                    if "type" in room and room["type"] == "telescope_lens" and self.options.planetarium.value == 0: continue
-                    if "type" in room and room["type"] == "red_key" and self.options.ultra_secret_room.value == 0: continue
-                    if "type" in room and room["type"] == "undefined" and self.options.error_room.value == 0: continue
+                    if "type" in room and room["type"] == "crawl_space" and self.options.crawl_space.value == 0: continue
+                    if "type" in room and room["type"] == "planetarium" and self.options.planetarium.value == 0: continue
+                    if "type" in room and room["type"] == "ultra_secret_room" and self.options.ultra_secret_room.value == 0: continue
+                    if "type" in room and room["type"] == "error_room" and self.options.error_room.value == 0: continue
                     location_name = f'{name} - {room_name}'
                     region.add_locations(self.create_location(location_name), TboiLocation)
                     if "type" in room and ( \
                        (room["type"] == "rng" and self.options.rng_rooms.value == 1) or \
-                       (room["type"] == "shovel" and self.options.crawl_space.value == 1) or \
-                       (room["type"] == "telescope_lens" and self.options.planetarium.value == 1) or \
-                       (room["type"] == "red_key" and self.options.ultra_secret_room.value == 1) or \
-                       (room["type"] == "undefined" and self.options.error_room.value == 1)):
+                       (room["type"] == "crawl_space" and self.options.crawl_space.value == 1) or \
+                       (room["type"] == "planetarium" and self.options.planetarium.value == 1) or \
+                       (room["type"] == "ultra_secret_room" and self.options.ultra_secret_room.value == 1) or \
+                       (room["type"] == "error_room" and self.options.error_room.value == 1)):
                         add_item_rule(self.get_location(location_name),
                                 lambda item: (item.classification & ItemClassification.progression) == 0)
                     if "requires" in room:
                         if "type" in room and ( \
-                           (room["type"] == "shovel" and self.options.crawl_space.value == 3) or \
-                           (room["type"] == "telescope_lens" and self.options.planetarium.value == 3) or \
-                           (room["type"] == "red_key" and self.options.ultra_secret_room.value == 3) or \
-                           (room["type"] == "undefined" and self.options.error_room.value == 3)):
+                           (room["type"] == "crawl_space" and self.options.crawl_space.value >= 3) or \
+                           (room["type"] == "planetarium" and self.options.planetarium.value >= 3) or \
+                           (room["type"] == "ultra_secret_room" and self.options.ultra_secret_room.value >= 3) or \
+                           (room["type"] == "error_room" and self.options.error_room.value >= 3)):
                             add_rule(self.get_location(location_name),
                                     lambda state, rule=room["requires"]: self.rule_from_data(state, rule))
             if name in self.options.additional_item_locations_per_stage.keys():
@@ -138,7 +152,14 @@ class TboiWorld(World):
         
         for region in self.multiworld.get_regions(self.player):
             if region.name in self.data["regions"].keys() and "connects_to" in self.data["regions"][region.name]:
-                for connection in self.data["regions"][region.name]["connects_to"]:
+                for connection_condition in self.data["regions"][region.name]["connects_to"]:
+                    skip_connection = False
+                    connection, *conditions = connection_condition.split('&')
+                    if (len(conditions) > 0):
+                        for condition in conditions:
+                            if not self.options.__dict__[condition].value:
+                                skip_connection = True
+                    if skip_connection: continue
                     if connection not in existing_regions: continue
                     exit_region = self.multiworld.get_region(connection, self.player)
                     if exit_region.name in self.data["regions"].keys() and "requires" in self.data["regions"][exit_region.name]:
@@ -160,7 +181,7 @@ class TboiWorld(World):
                     for i in range(reward["amount"]):
                         boss_region.add_locations(self.create_location(f'{boss} Reward #{i+1}'), TboiLocation)
                     self.multiworld.regions.append(boss_region)
-                if boss in self.goals:
+                if boss in {c.split('|')[0] for c in self.goals}:
                     boss_region.add_locations(self.create_location(f'Defeat {boss}'), TboiLocation)
 
     
@@ -188,8 +209,10 @@ class TboiWorld(World):
             if "type" in unlock and "ascend" in unlock["type"] and "Ascend" in self.options.excluded_areas.value: continue
             if "type" in unlock and "timed" in unlock["type"] and "Timed Areas" in self.options.excluded_areas.value: continue
             if "type" in unlock and "shovel" in unlock["type"] and self.options.crawl_space.value != 3: continue
+            if "type" in unlock and "ehwaz" in unlock["type"] and self.options.crawl_space.value != 4: continue
             if "type" in unlock and "telescope_lens" in unlock["type"] and self.options.planetarium.value != 3: continue
             if "type" in unlock and "red_key" in unlock["type"] and self.options.ultra_secret_room.value != 3: continue
+            if "type" in unlock and "soul_of_cain" in unlock["type"] and self.options.ultra_secret_room.value != 4: continue
             if "type" in unlock and "undefined" in unlock["type"] and self.options.error_room.value != 3: continue
             if "type" in unlock and "variant" in unlock["type"] and not self.options.floor_variations.value: continue
             self.multiworld.itempool.append(self.create_item(f'{name} Unlock'))
@@ -210,6 +233,11 @@ class TboiWorld(World):
         if self.options.progressive_mapping_upgrades:
             for _ in range(3):
                 self.multiworld.itempool.append(self.create_item('Progressive Map Upgrade'))
+                own_items += 1
+
+        if self.options.progressive_inventory_upgrades:
+            for _ in range(4):
+                self.multiworld.itempool.append(self.create_item('Progressive Inventory Upgrade'))
                 own_items += 1
 
         total_locations = len(self.multiworld.get_locations(self.player))
@@ -233,6 +261,7 @@ class TboiWorld(World):
     def set_rules(self) -> None:
         goals = 0
         for goal in self.goals:
+            goal, *_ = goal.split('|')
             self.multiworld.get_location(f'Defeat {goal}', self.player).place_locked_item(self.create_event("Victory Condition"))
             goals += 1
         goal_amount = self.options.goal_amount.value
@@ -269,14 +298,21 @@ class TboiWorld(World):
                 "exclude_items_as_rewards",
                 "death_link",
                 "goal_amount",
+                "character_goals",
+                "exclude_characters",
                 "rng_rooms",
                 "ultra_secret_room",
                 "error_room",
                 "crawl_space",
                 "planetarium",
+                "planetarium_chapter_four",
+                "sacrifice_room_logic",
+                "trapdoor_logic",
+                "error_room_logic",
                 "floor_variations",
                 "death_link_severity",
                 "progressive_mapping_upgrades",
+                "progressive_inventory_upgrades",
                 "permanent_stat_upgrades",
                 "start_out_nerfed",
                 toggles_as_bools=True) 
@@ -316,6 +352,37 @@ class TboiWorld(World):
         
         if len(self.goals) == 0:
             self.goals = ['Mom']
+
+        if self.options.character_goals.value > 0:
+            available_characters = set(self.data["characters"]) - self.options.exclude_characters.value
+            if "Tainted" in self.options.exclude_characters.value:
+                available_characters = {c for c in available_characters if not c.startswith("Tainted")}
+            if "Non-Tainted" in self.options.exclude_characters.value:
+                available_characters = {c for c in available_characters if c.startswith("Tainted")}
+
+            available_characters = list(available_characters)
+            self.random.shuffle(available_characters)
+
+            og_len = len(available_characters)
+            while len(available_characters) < len(self.goals):
+                available_characters.append(available_characters[self.random.randint(0, og_len-1)])
+            self.random.shuffle(available_characters)
+
+            new_goals = []
+
+            if self.options.character_goals.value == 1:
+                for goal in self.goals:
+                    new_goals.append(f'{goal}|{available_characters.pop()}')
+            elif self.options.character_goals.value == 2:
+                x = 0
+                for goal in self.goals:
+                    character_amount_per_goal = -(-len(available_characters) // (len(self.goals)-x))
+                    x+=1
+                    characters = []
+                    for _ in range(character_amount_per_goal):
+                        characters.append(available_characters.pop())
+                    new_goals.append(f'{goal}|{"|".join(characters)}')
+            self.goals = new_goals
 
         re_gen_passthrough = getattr(self.multiworld, "re_gen_passthrough", {})
         if re_gen_passthrough and self.game in re_gen_passthrough:
