@@ -498,7 +498,9 @@ class Goal(BoxLayout):
         self.completed = False
 
     def _complete(self, *args):
-        self.children[0].color = (0, 0, 0, 1)
+        for child in self.children:
+            if isinstance(child, Image):
+                child.color = (0, 0, 0, 1)
         self.completed = True
 
 class TrackerTooltip(BoxLayout):
