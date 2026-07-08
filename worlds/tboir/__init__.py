@@ -347,6 +347,7 @@ class TboiWorld(World):
                         self.goals.append(goal)
                         available_bosses.remove(goal)
 
+                available_bosses.sort()
                 self.random.shuffle(available_bosses)
                 for goal in self.options.goals.value:
                     if goal.startswith("Random"):
@@ -354,6 +355,7 @@ class TboiWorld(World):
                         for _ in range(amount):
                             if len(available_bosses):
                                 self.goals.append(available_bosses.pop())
+                self.goals.sort()
 
             for excluded_area in self.options.excluded_areas.value:
                 for _, region in self.data["regions"].items():
@@ -376,6 +378,7 @@ class TboiWorld(World):
                     available_characters = {c for c in available_characters if c.startswith("Tainted")}
 
                 available_characters = list(available_characters)
+                available_characters.sort()
                 self.random.shuffle(available_characters)
 
                 if len(available_characters) == 0:

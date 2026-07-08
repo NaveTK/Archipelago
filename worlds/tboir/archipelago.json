@@ -1,6 +1,6 @@
 {
     "game": "The Binding of Isaac Repentance",
-    "world_version": "0.3.0",
-    "minimum_ap_version": "0.6.4",
+    "world_version": "0.4.1",
+    "minimum_ap_version": "0.6.5",
     "authors": ["NaveTK"]
 }
