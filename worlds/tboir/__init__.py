@@ -322,67 +322,6 @@ class TboiWorld(World):
     
     def generate_early(self) -> None:
         self.goals = []
-        available_bosses = list(self.data["boss_rewards"].keys())
-
-        if "All" in self.options.goals.value:
-            self.goals = available_bosses
-        else:
-            for goal in self.options.goals.value:
-                if goal in available_bosses:
-                    self.goals.append(goal)
-                    available_bosses.remove(goal)
-
-            self.random.shuffle(available_bosses)
-            for goal in self.options.goals.value:
-                if goal.startswith("Random"):
-                    amount = int(goal.split('-')[1])
-                    for _ in range(amount):
-                        if len(available_bosses):
-                            self.goals.append(available_bosses.pop())
-
-        for excluded_area in self.options.excluded_areas.value:
-            for _, region in self.data["regions"].items():
-                if "type" in region and "boss" in region:
-                    if region["type"] == "alt" and excluded_area == "Alt Path" or \
-                        region["type"] == "void" and excluded_area == "The Void" or \
-                        region["type"] == "timed" and excluded_area == "Timed Areas" or \
-                        region["type"] == "ascend" and excluded_area == "Ascend":
-                        if region["boss"] in self.goals:
-                            self.goals.remove(region["boss"])
-        
-        if len(self.goals) == 0:
-            self.goals = ['Mom']
-
-        if self.options.character_goals.value > 0:
-            available_characters = set(self.data["characters"]) - self.options.exclude_characters.value
-            if "Tainted" in self.options.exclude_characters.value:
-                available_characters = {c for c in available_characters if not c.startswith("Tainted")}
-            if "Non-Tainted" in self.options.exclude_characters.value:
-                available_characters = {c for c in available_characters if c.startswith("Tainted")}
-
-            available_characters = list(available_characters)
-            self.random.shuffle(available_characters)
-
-            og_len = len(available_characters)
-            while len(available_characters) < len(self.goals):
-                available_characters.append(available_characters[self.random.randint(0, og_len-1)])
-            self.random.shuffle(available_characters)
-
-            new_goals = []
-
-            if self.options.character_goals.value == 1:
-                for goal in self.goals:
-                    new_goals.append(f'{goal}|{available_characters.pop()}')
-            elif self.options.character_goals.value == 2:
-                x = 0
-                for goal in self.goals:
-                    character_amount_per_goal = -(-len(available_characters) // (len(self.goals)-x))
-                    x+=1
-                    characters = []
-                    for _ in range(character_amount_per_goal):
-                        characters.append(available_characters.pop())
-                    new_goals.append(f'{goal}|{"|".join(characters)}')
-            self.goals = new_goals
 
         re_gen_passthrough = getattr(self.multiworld, "re_gen_passthrough", {})
         if re_gen_passthrough and self.game in re_gen_passthrough:
@@ -396,6 +335,73 @@ class TboiWorld(World):
                 if opt is not None:
                     # You can also set .value directly but that won't work if you have OptionSets
                     setattr(self.options, key, opt.from_any(value))
+            self.goals = self.options.goals.value
+        else:
+            available_bosses = list(self.data["boss_rewards"].keys())
+
+            if "All" in self.options.goals.value:
+                self.goals = available_bosses
+            else:
+                for goal in self.options.goals.value:
+                    if goal in available_bosses:
+                        self.goals.append(goal)
+                        available_bosses.remove(goal)
+
+                self.random.shuffle(available_bosses)
+                for goal in self.options.goals.value:
+                    if goal.startswith("Random"):
+                        amount = int(goal.split('-')[1])
+                        for _ in range(amount):
+                            if len(available_bosses):
+                                self.goals.append(available_bosses.pop())
+
+            for excluded_area in self.options.excluded_areas.value:
+                for _, region in self.data["regions"].items():
+                    if "type" in region and "boss" in region:
+                        if region["type"] == "alt" and excluded_area == "Alt Path" or \
+                            region["type"] == "void" and excluded_area == "The Void" or \
+                            region["type"] == "timed" and excluded_area == "Timed Areas" or \
+                            region["type"] == "ascend" and excluded_area == "Ascend":
+                            if region["boss"] in self.goals:
+                                self.goals.remove(region["boss"])
+            
+            if len(self.goals) == 0:
+                self.goals = ['Mom']
+
+            if self.options.character_goals.value > 0:
+                available_characters = set(self.data["characters"]) - self.options.exclude_characters.value
+                if "Tainted" in self.options.exclude_characters.value:
+                    available_characters = {c for c in available_characters if not c.startswith("Tainted")}
+                if "Non-Tainted" in self.options.exclude_characters.value:
+                    available_characters = {c for c in available_characters if c.startswith("Tainted")}
+
+                available_characters = list(available_characters)
+                self.random.shuffle(available_characters)
+
+                if len(available_characters) == 0:
+                    available_characters.append("Isaac")
+
+                og_len = len(available_characters)
+                while len(available_characters) < len(self.goals):
+                    available_characters.append(available_characters[self.random.randint(0, og_len-1)])
+                self.random.shuffle(available_characters)
+
+                new_goals = []
+
+                if self.options.character_goals.value == 1:
+                    for goal in self.goals:
+                        new_goals.append(f'{goal}|{available_characters.pop()}')
+                elif self.options.character_goals.value == 2:
+                    x = 0
+                    for goal in self.goals:
+                        character_amount_per_goal = -(-len(available_characters) // (len(self.goals)-x))
+                        x+=1
+                        characters = []
+                        for _ in range(character_amount_per_goal):
+                            characters.append(available_characters.pop())
+                        new_goals.append(f'{goal}|{"|".join(characters)}')
+                self.goals = new_goals
+
 
     @staticmethod
     def interpret_slot_data(slot_data: dict[str, Any]) -> dict[str, Any]:
