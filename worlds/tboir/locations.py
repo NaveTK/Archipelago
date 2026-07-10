@@ -15,7 +15,9 @@ def location_list(data):
         for i in range(reward["amount"]):
             locations.append(f'{boss} Reward #{i+1}')
 
-    for stage in AdditionalItemLocationsPerStage.valid_keys:
+    stages = list(AdditionalItemLocationsPerStage.valid_keys)
+    stages.sort()
+    for stage in stages:
         for i in range(10):
             locations.append(f'{stage} - Item #{i+1}')
 
@@ -37,7 +39,9 @@ def location_group_list(data):
         for i in range(reward["amount"]):
             add_to_location_group(location_name_groups, "Boss Rewards", f'{boss} Reward #{i+1}')
 
-    for stage in AdditionalItemLocationsPerStage.valid_keys:
+    stages = list(AdditionalItemLocationsPerStage.valid_keys)
+    stages.sort()
+    for stage in stages:
         for i in range(10):
             add_to_location_group(location_name_groups, "AP Items", f'{stage} - Item #{i+1}')
             add_to_location_group(location_name_groups, stage, f'{stage} - Item #{i+1}')
