@@ -71,7 +71,7 @@ class TrackerCommandProcessor(ClientCommandProcessor):
     def __init__(self, ctx: CommonContext):
         super().__init__(ctx)
         try:
-            from worlds._tracker_addons import UT_FUNCTIONS
+            from worlds.tracker_addons import UT_FUNCTIONS
             for name, function in UT_FUNCTIONS.items():
                 if name not in self.commands:
                     function.__doc__ = f"Provided by : {function.__module__}\n{function.__doc__}"
@@ -286,7 +286,6 @@ class TrackerCommandProcessor(ClientCommandProcessor):
             connected_cls = AutoWorld.AutoWorldRegister.world_types.get(self.ctx.game)
             if self.ctx.checksums[self.ctx.game] != connected_cls.get_data_package_data()["checksum"]:
                 logger.error(f"Local checksum = {self.ctx.checksums[self.ctx.game]} | remote checksum = {connected_cls.get_data_package_data()['checksum']}")
-
 
 def cmd_load_map(self: TrackerCommandProcessor, map_id: str = "0"):
     """Force a poptracker map id to be loaded"""
@@ -1161,7 +1160,7 @@ class TrackerGameContext(CommonContext):
         from kivy.animation import Animation
         from kvui import ImageLoader
         try:
-            from worlds._tracker_addons import UT_ADDONS_VERSION
+            from worlds.tracker_addons import UT_ADDONS_VERSION
         except ImportError:
             UT_ADDONS_VERSION = None
 
