@@ -101,9 +101,24 @@ def nearest_location(self: "TrackerCommandProcessor", region_name: str=""):
     current_world.origin_region_name = region_name
     stupid_thing(self)
     current_world.origin_region_name = normal_origin
+    self.ctx.updateTracker()
+
+@mark_raw
+def get_regions(self: "TrackerCommandProcessor", region_name: str=""):
+    current_world = self.ctx.tracker_core.get_current_world()
+    if current_world is None:
+        logger.error("Tracked World not found, fix that")
+        return
+    for region in current_world.get_regions():
+        if region_name and region_name not in region.name:
+            continue
+        logger.info(region.name)
+
+
 
 
 UT_FUNCTIONS["next_progression"] = next_progression
 UT_FUNCTIONS["get_depth"] = stupid_thing
 UT_FUNCTIONS["glp"] = glp
 UT_FUNCTIONS["nearest_locations"] = nearest_location
+UT_FUNCTIONS["get_regions"] = get_regions
