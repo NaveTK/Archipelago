@@ -68,6 +68,17 @@ def get_ut_color(color: str)->str:
 class TrackerCommandProcessor(ClientCommandProcessor):
     ctx: "TrackerGameContext"
 
+    def __init__(self, ctx: CommonContext):
+        super().__init__(ctx)
+        try:
+            from worlds._tracker_addons import UT_FUNCTIONS
+            for name, function in UT_FUNCTIONS.items():
+                if name not in self.commands:
+                    function.__doc__ = f"Provided by : {function.__module__}\n{function.__doc__}"
+                    self.commands[name] = function
+        except Exception as e:
+            pass #just ignore it if it doesn't work, it's fine
+
     def get_help_text(self) -> str:
         sReturn = super().get_help_text() #get the normal response
         new_text = self.ctx.get_help_text()
@@ -212,28 +223,6 @@ class TrackerCommandProcessor(ClientCommandProcessor):
         self.ctx.persist_seed_data()
         self.ctx.updateTracker()
         logger.info("Reset ignored locations.")
-
-    def _cmd_next_progression(self):
-        """Finds all items that will unlock a check immediately when collected, and a best guess of how many new checks they will unlock."""
-        updateTracker(self.ctx)
-        baseLocs = len(self.ctx.tracker_core.locations_available)
-        counter = Counter()
-        goal_items = []
-        items_to_check = {item.name for item in self.ctx.tracker_core.multiworld.get_items() if item.player == self.ctx.tracker_core.player_id and item.advancement}
-        for item in items_to_check:
-            self.ctx.tracker_core.manual_items.append(item)
-            update_ret = updateTracker(self.ctx)
-            newlocs = len(self.ctx.tracker_core.locations_available) - baseLocs
-            if newlocs:
-                counter[item] = newlocs
-            if self.ctx.tracker_core.multiworld.completion_condition[self.ctx.tracker_core.player_id](update_ret.state):
-                goal_items.append(item)
-            self.ctx.tracker_core.manual_items.pop()
-        if not counter:
-            logger.info("No item will unlock any checks right now.")
-        for (item, count) in counter.most_common():
-            logger.info(f"{item} unlocks {count} check{'s' if count > 1 else ''}{' (and goal)' if item in goal_items else ''}.")
-        updateTracker(self.ctx)
 
     def _cmd_toggle_auto_tab(self):
         """Toggle the auto map tabbing function"""
@@ -1171,6 +1160,10 @@ class TrackerGameContext(CommonContext):
         from kivy.metrics import dp
         from kivy.animation import Animation
         from kvui import ImageLoader
+        try:
+            from worlds._tracker_addons import UT_ADDONS_VERSION
+        except ValueError:
+            UT_ADDONS_VERSION = None
 
         class TrackerManager(ui):
             source = StringProperty("")
@@ -1180,7 +1173,7 @@ class TrackerGameContext(CommonContext):
             enable_map = BooleanProperty(False)
             current_map = StringProperty("")
             auto_tab = BooleanProperty(True)
-            base_title = f"Tracker {UT_VERSION} for AP version"  # core appends ap version so this works
+            base_title = f"Tracker {UT_VERSION}{' Addons ' if UT_ADDONS_VERSION else ' '}{UT_ADDONS_VERSION if UT_ADDONS_VERSION else '' } for AP version"  # core appends ap version so this works
 
             def build(self):
                 class TrackerHintLabel(HintLabel):
