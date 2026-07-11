@@ -1162,7 +1162,7 @@ class TrackerGameContext(CommonContext):
         from kvui import ImageLoader
         try:
             from worlds._tracker_addons import UT_ADDONS_VERSION
-        except ValueError:
+        except ImportError:
             UT_ADDONS_VERSION = None
 
         class TrackerManager(ui):
