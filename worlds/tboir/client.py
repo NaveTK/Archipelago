@@ -17,8 +17,6 @@ from worlds.tboir import TboiSettings
 ModuleUpdate.update()
 
 import Utils
-from .game_data import data
-
 
 tracker_loaded = False
 try:
@@ -266,6 +264,10 @@ class IsaacContext(SuperContext):
             if "checked_locations" in args:
                 if self.ui.tracker_tab:
                     self.ui.tracker_tab.on_location_update(self.checked_locations)
+                self.commands_to_be_sent.put(IsaacContext.Command(
+                    type="CheckedLocation",
+                    payload=args["checked_locations"]
+                ))
                 self.update_hints()
         if cmd in {"LocationInfo"}:
             if "locations" in args:
@@ -379,6 +381,8 @@ class IsaacContext(SuperContext):
         if not os.path.isfile(self.save_data_path): return
 
         try:
+            data = json.loads(open(self.save_data_path).read())
+
             save_data = IsaacContext.SaveData(
                 session_id=data["session_id"],
                 timestamp=data["timestamp"],
