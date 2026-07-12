@@ -1,6 +1,4 @@
-
 import io
-import json
 import math
 import pkgutil
 from kivy.core.window import Window
@@ -14,6 +12,7 @@ from kivy.uix.stacklayout import StackLayout
 from kivy.uix.floatlayout import FloatLayout
 
 from worlds.tboir.client import IsaacContext
+from .game_data import data
 
 class TrackerLayout(FloatLayout):
     ctx: IsaacContext
@@ -56,7 +55,6 @@ class TrackerLayout(FloatLayout):
         self.active_tooltip = None
         self.tooltips = []
 
-        self.data = json.loads(pkgutil.get_data(__name__, "data.json").decode())
         self.bind(size=self._update_overlay, pos=self._update_overlay)
         Window.bind(mouse_pos=self._update_tooltip)
         Window.bind(on_mouse_down=self._force_tooltip)
@@ -68,7 +66,7 @@ class TrackerLayout(FloatLayout):
 
         self.run_info = InfoView(size=(232, 1), size_hint=(None, 1))
         self.main.add_widget(self.run_info)
-        #self.main.bind(size=self.run_info._update_graphics, pos=self.run_info._update_graphics)
+        self.main.bind(size=self.run_info._update_graphics, pos=self.run_info._update_graphics)
 
         self.img = self.load_image('tracker/images/tracker.jpg', 'jpg')
         self.main.add_widget(self.img)
@@ -97,12 +95,12 @@ class TrackerLayout(FloatLayout):
             if region_name not in self.regions:
                 x = 0
                 y = 0
-                if region_name in self.data["regions"].keys():
-                    x = self.data["regions"][region_name]["tracker_location"]["x"]
-                    y = self.data["regions"][region_name]["tracker_location"]["y"]
-                if region_name in self.data["boss_rewards"].keys():
-                    x = self.data["boss_rewards"][region_name]["tracker_location"]["x"]
-                    y = self.data["boss_rewards"][region_name]["tracker_location"]["y"]
+                if region_name in data["regions"].keys():
+                    x = data["regions"][region_name]["tracker_location"]["x"]
+                    y = data["regions"][region_name]["tracker_location"]["y"]
+                if region_name in data["boss_rewards"].keys():
+                    x = data["boss_rewards"][region_name]["tracker_location"]["x"]
+                    y = data["boss_rewards"][region_name]["tracker_location"]["y"]
                 region = Region(ox=x, oy=y, osize=30)
                 region.tooltip_anchor = 30
                 self.img.add_widget(region)
@@ -115,15 +113,15 @@ class TrackerLayout(FloatLayout):
 
             region = self.regions[region_name]
             rule = None
-            if icon_name in self.data["rooms"]:
-                room = self.data["rooms"][icon_name]
+            if icon_name in data["rooms"]:
+                room = data["rooms"][icon_name]
                 if "requires" in room:
                     if "type" in room and ( \
                        (room["type"] == "crawl_space" and self.ctx.options["crawl_space"] >= 3) or \
                        (room["type"] == "planetarium" and self.ctx.options["planetarium"] == 3) or \
                        (room["type"] == "ultra_secret_room" and self.ctx.options["ultra_secret_room"] >= 3) or \
                        (room["type"] == "error_room" and self.ctx.options["error_room"] == 3)):
-                        rule = self.data["rooms"][icon_name]["requires"]
+                        rule = data["rooms"][icon_name]["requires"]
             location_box = Location(location_name, rule, self, region, height=26, size_hint=(1, None), spacing=5)
             icon = self.load_image(f'tracker/images/{icon_name}.png')
             icon.size = (24, 24)
@@ -215,7 +213,7 @@ class TrackerLayout(FloatLayout):
         self.unlocks_box = StackLayout(size_hint=(1, None), spacing=4)
         self.box_layout.add_widget(self.unlocks_box)
 
-        for unlock_name, unlock in self.data["unlocks"].items():
+        for unlock_name, unlock in data["unlocks"].items():
             if "type" in unlock and "alt" in unlock["type"] and "Alt Path" in self.ctx.options["excluded_areas"]: continue
             if "type" in unlock and "void" in unlock["type"] and "The Void" in self.ctx.options["excluded_areas"]: continue
             if "type" in unlock and "ascend" in unlock["type"] and "Ascend" in self.ctx.options["excluded_areas"]: continue
@@ -269,7 +267,7 @@ class TrackerLayout(FloatLayout):
         consumables_layout = BoxLayout(size_hint=(1, None), height=0, orientation='vertical')
         self.items_box.add_widget(consumables_layout)
 
-        for item in self.data["items"]:
+        for item in data["items"]:
             if item.endswith('Trap'):
                 continue
             item_box = BoxLayout(height=26, size_hint=(1, None), spacing=5)
@@ -447,19 +445,26 @@ class TrackerLayout(FloatLayout):
         if not rule:
             return True
         if "has" in rule:
-            unlock, *conditions = rule["has"].split('&')
-            if (len(conditions) > 0):
-                for condition in conditions:
-                    if not self.ctx.options[condition]:
+            return rule["has"] in self.unlocks and self.unlocks[rule["has"]].unlocked
+        if "hasIfOption" in rule:
+            unlock = rule["hasIfOption"]["has"]
+            options = rule["hasIfOption"]["options"]
+            if (len(options) > 0):
+                for option in options:
+                    if self.ctx.options[option[0]] != option[1]:
                         return False
-            return unlock == '' or (unlock in self.unlocks and self.unlocks[unlock].unlocked)
+            return unlock in self.unlocks and self.unlocks[unlock].unlocked
+        if "option" in rule:
+            return self.ctx.options[rule["option"][0]] == rule["option"][1]
+        if "reach" in rule:
+            return self.regions[rule["reach"]].reachable
         if "or" in rule:
             return any(self.evaluate_rule(x) for x in rule["or"])
         if "and" in rule:
             return all(self.evaluate_rule(x) for x in rule["and"])
         
     def update_reachability(self, region, prev_reachable):
-        j_region = self.data["regions"][region]
+        j_region = data["regions"][region]
         if region in self.regions:
             rule = None
             if "requires" in j_region:
@@ -528,8 +533,12 @@ class InfoView(ScrollView):
         super().__init__(**kwargs)
 
         with self.canvas.before:
-            Color(0, 0, 0, 0.85)
+            Color(0.15, 0.15, 0.15)
             self.rect = Rectangle(size=self.size, pos=self.pos)
+    
+    def _update_graphics(self, *args):
+        self.height = self.parent.height
+        self.rect.size = (self.width, self.height)
 
 
 class Location(BoxLayout):

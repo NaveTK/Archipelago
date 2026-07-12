@@ -263,7 +263,7 @@ class PlanetariumChapterFour(DefaultOnToggle):
 
 class ErrorRoomLogic(Toggle):
     """
-    Should Womb, Sheol, Cathedral, Chest and Dark Room be in logic after Undefined, Red Key or Soul of Cain are unlocked? (Those floors can be reached via Error Rooms)
+    Should Womb, Sheol, Cathedral, Chest and Dark Room be in logic after Undefined or Red Key are unlocked? (Those floors can be reached via Error Rooms)
     """
     display_name = "Error Room Logic"
 
