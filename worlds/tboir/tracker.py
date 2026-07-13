@@ -223,6 +223,7 @@ class TrackerLayout(FloatLayout):
             if "type" in unlock and "telescope_lens" in unlock["type"] and self.ctx.options["planetarium"] != 3: continue
             if "type" in unlock and "red_key" in unlock["type"] and self.ctx.options["ultra_secret_room"] != 3: continue
             if "type" in unlock and "soul_of_cain" in unlock["type"] and self.ctx.options["ultra_secret_room"] != 4: continue
+            if "type" in unlock and "cracked_key" in unlock["type"] and self.ctx.options["ultra_secret_room"] != 5: continue
             if "type" in unlock and "undefined" in unlock["type"] and self.ctx.options["error_room"] != 3: continue
             if "type" in unlock and "variant" in unlock["type"] and not self.ctx.options["floor_variations"]: continue
             unlock_box = Unlock(size=(32,28), size_hint=(None, None))

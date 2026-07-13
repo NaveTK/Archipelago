@@ -20,7 +20,7 @@ data = {
 		"Crawl Space": {"type": "crawl_space", "requires": {"or": [{"has": "We Need To Go Deeper!"}, {"has": "Ehwaz"}]}},
 		"I AM ERROR": {"type": "error_room", "requires": {"has": "Undefined"}},
 		"Planetarium": {"type": "planetarium", "requires": {"has": "Telescope Lens"}},
-		"Ultra Secret Room": {"type": "ultra_secret_room", "requires": {"or": [{"has": "Red Key"}, {"has": "Soul of Cain"}]}}
+		"Ultra Secret Room": {"type": "ultra_secret_room", "requires": {"or": [{"has": "Red Key"}, {"has": "Soul of Cain"}, {"has": "Cracked Key"}]}}
 	},
 	"items": [
 		"Angel Deal Item",
@@ -124,7 +124,8 @@ data = {
 		"Undefined": {"type": ["undefined"]},
 		"Telescope Lens": {"type": ["telescope_lens"]},
 		"Red Key": {"type": ["red_key"]},
-		"Soul of Cain": {"type": ["soul_of_cain"]}
+		"Soul of Cain": {"type": ["soul_of_cain"]},
+		"Cracked Key": {"type": ["cracked_key"]}
 	},
 	"regions": {
 		"Menu": {
@@ -274,7 +275,7 @@ data = {
 				"or": [
 					{"has": "Womb"},
 					{"hasIfOption": {"has" : "We Need To Go Deeper!", "options": [("trapdoor_logic", True), ("crawl_space", 3)]}},
-					{"hasIfOption": {"has" : "Ewahz", "options": [("trapdoor_logic", True), ("crawl_space", 4)]}},
+					{"hasIfOption": {"has" : "Ehwaz", "options": [("trapdoor_logic", True), ("crawl_space", 4)]}},
 					{"hasIfOption": {"has" : "Undefined", "options": [("error_room_logic", True), ("error_room", 3)]}},
 					{"hasIfOption": {"has" : "Red Key", "options": [("error_room_logic", True), ("ultra_secret_room", 3)]}}
 					]},
@@ -339,7 +340,7 @@ data = {
 				"or": [
 					{"has": "Sheol"},
 					{"hasIfOption": {"has" : "We Need To Go Deeper!", "options": [("trapdoor_logic", True), ("crawl_space", 3)]}},
-					{"hasIfOption": {"has" : "Ewahz", "options": [("trapdoor_logic", True), ("crawl_space", 4)]}},
+					{"hasIfOption": {"has" : "Ehwaz", "options": [("trapdoor_logic", True), ("crawl_space", 4)]}},
 					{"hasIfOption": {"has" : "Undefined", "options": [("error_room_logic", True), ("error_room", 3)]}},
 					{"hasIfOption": {"has" : "Red Key", "options": [("error_room_logic", True), ("ultra_secret_room", 3)]}}
 					]},
@@ -384,7 +385,11 @@ data = {
 			"rooms": ["Boss Room"],
 			"connects_to": ["The Void"],
 			"boss": "Mega Satan",
-			"requires": {"has": "Key Pieces"},
+			"requires": {
+                "or": [
+                	{"has": "Key Pieces"},
+					{"hasIfOption": {"has" : "Soul of Cain", "options": [("soul_of_cain_logic", True), ("ultra_secret_room", 4)]}},
+				]},
 			"tracker_location": {
                 "x": 1760,
                 "y": 350
@@ -491,7 +496,11 @@ data = {
 			"rooms": ["Secret Room", "Super Secret Room", "Boss Room", "Arcade", "Challenge Room", "Curse Room", "Sacrifice Room", "Miniboss Room", "Deal Room"],
 			"connects_to": ["Chapter 4"],
 			"boss": "Mother",
-			"requires": {"reach": "The Escape"},
+			"requires": {
+                "or": [
+                	{"reach": "The Escape"},
+					{"hasIfOption": {"has" : "Soul of Cain", "options": [("soul_of_cain_logic", True), ("ultra_secret_room", 4)]}},
+				]},
 			"tracker_location": {
                 "x": 1015,
                 "y": 545
@@ -507,7 +516,8 @@ data = {
 					{"has": "Strange Door"},
 					{"or": [
 						{"has": "The Polaroid"},
-						{"has": "The Negative"}
+						{"has": "The Negative"},
+						{"hasIfOption": {"has" : "Soul of Cain", "options": [("soul_of_cain_logic", True), ("ultra_secret_room", 4)]}},
 					]}
 				]
 			},

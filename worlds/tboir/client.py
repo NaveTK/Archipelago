@@ -202,6 +202,8 @@ class IsaacContext(SuperContext):
                 self.options["error_room_logic"] = True
             if "sacrifice_room_logic" not in self.options:
                 self.options["sacrifice_room_logic"] = False
+            if "soul_of_cain_logic" not in self.options:
+                self.options["soul_of_cain_logic"] = False
             if "floor_variations" not in self.options:
                 self.options["floor_variations"] = True
             if "death_link_severity" not in self.options:

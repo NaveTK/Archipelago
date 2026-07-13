@@ -230,6 +230,7 @@ class TboiWorld(World):
             if "type" in unlock and "telescope_lens" in unlock["type"] and self.options.planetarium.value != 3: continue
             if "type" in unlock and "red_key" in unlock["type"] and self.options.ultra_secret_room.value != 3: continue
             if "type" in unlock and "soul_of_cain" in unlock["type"] and self.options.ultra_secret_room.value != 4: continue
+            if "type" in unlock and "cracked_key" in unlock["type"] and self.options.ultra_secret_room.value != 5: continue
             if "type" in unlock and "undefined" in unlock["type"] and self.options.error_room.value != 3: continue
             if "type" in unlock and "variant" in unlock["type"] and not self.options.floor_variations.value: continue
             self.multiworld.itempool.append(self.create_item(f'{name} Unlock'))
@@ -327,6 +328,7 @@ class TboiWorld(World):
                 "sacrifice_room_logic",
                 "trapdoor_logic",
                 "error_room_logic",
+                "soul_of_cain_logic",
                 "floor_variations",
                 "death_link_severity",
                 "progressive_mapping_upgrades",
