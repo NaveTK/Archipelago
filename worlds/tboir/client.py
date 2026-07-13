@@ -69,6 +69,8 @@ class IsaacClientCommandProcessor(SuperContext.command_processor):
 class IsaacContext(SuperContext):
     settings: TboiSettings = None
 
+    tags={"AP"}
+
     save_data_path: str = ""
     mod_viable: bool = False
     client_version = Utils.Version(2,0,0)
