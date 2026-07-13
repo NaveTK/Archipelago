@@ -1,6 +1,4 @@
-from collections import Counter
-
-from BaseClasses import CollectionState, ItemClassification
+from BaseClasses import ItemClassification
 from test.bases import WorldTestBase
 
 from .. import TboiWorld

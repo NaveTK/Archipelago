@@ -20,7 +20,7 @@ import Utils
 
 tracker_loaded = False
 try:
-    from worlds.tracker.TrackerClient import TrackerGameContext as SuperContext
+    from worlds.tracker.TrackerClient import TrackerGameContext as SuperContext         #pyright: ignore[reportMissingImports]
     tracker_loaded = True
 except ModuleNotFoundError:
     from CommonClient import CommonContext as SuperContext
@@ -162,6 +162,10 @@ class IsaacContext(SuperContext):
             self.ui.tabs.children[4].trigger_action()
             self.ui.remove_client_tab(self.ui.tabs.children[0])
             self.ui.tracker_tab = None
+            self.options = {}
+            self.scouted_locations = {}
+            self.hintable_locations = {}
+            self.stored_data = {}
 
     async def shutdown(self):
         await super(IsaacContext, self).shutdown()

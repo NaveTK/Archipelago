@@ -13,7 +13,7 @@ AREA_OPTION_TO_TYPE = {
 class TestExcludedAreas(TboiTestBase):
     options = {
         "goals": {"Mother", "Delirium", "Beast", "Boss Rush"},
-        "excluded_areas": set(AREA_OPTION_TO_TYPE),
+        "excluded_areas": set(AREA_OPTION_TO_TYPE.keys()),
     }
 
     def test_excluded_area_regions_unlocks_and_goals_are_removed(self) -> None:

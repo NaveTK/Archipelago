@@ -154,8 +154,7 @@ class TrackerLayout(FloatLayout):
 
         for goal in self.ctx.options["goals"]:
             goal, *characters = goal.split('|')
-            extra_cols = -(-len(characters) // 3)
-            goal_box = Goal(size=(48+extra_cols*16,48), size_hint=(None, None))
+            goal_box = Goal(size=(48,48), size_hint=(None, None))
             icon = self.load_image(f'tracker/images/{goal} Goal.png')
             icon.size = (48, 48)
             icon.texture.min_filter = 'nearest'
@@ -165,10 +164,15 @@ class TrackerLayout(FloatLayout):
             icon.tooltip_anchor = 53
             goal_box.add_widget(icon)
             if len(characters) > 0:
-                characters_box = StackLayout(size=(extra_cols*16, 48), size_hint=(None, None), orientation='tb-lr', spacing=0)
+                x = 0
+                y = 0
+                if goal in data["boss_rewards"].keys():
+                    x = data["boss_rewards"][goal]["tracker_location"]["x"]
+                    y = data["boss_rewards"][goal]["tracker_location"]["y"]
+                characters_box = Characters(ox=x, oy=y)
                 for character in characters:
                     char_icon = self.load_image(f'tracker/images/{character.replace("???", "Blue Baby")}.png')
-                    char_icon.size = (16, 16)
+                    char_icon.size = (32, 32)
                     char_icon.texture.min_filter = 'nearest'
                     char_icon.texture.mag_filter = 'nearest'
                     char_icon.size_hint=(None, None)
@@ -184,7 +188,9 @@ class TrackerLayout(FloatLayout):
                     tooltip._update_pos()
                     self.tooltips.append((char_icon, tooltip))
 
-                goal_box.add_widget(characters_box)
+                self.img.add_widget(characters_box)
+                self.img.bind(size=characters_box._update_graphics, pos=characters_box._update_graphics)
+                characters_box._update_graphics()
             self.goals[goal] = goal_box
             self.goals_box.add_widget(goal_box)
             tooltip = TrackerTooltip(padding=(8, 4), size_hint=(None, None))
@@ -198,7 +204,7 @@ class TrackerLayout(FloatLayout):
         self.goals_box.do_layout()
 
         total_goals = len(self.ctx.options["goals"])
-        goals_per_row = max(math.floor((232 - 16) / (52+extra_cols*16)), 1)
+        goals_per_row = max(math.floor((232 - 16) / 52), 1)
         goal_rows = math.ceil(total_goals / goals_per_row)
         self.goals_box.height = goal_rows * 52
 
@@ -566,6 +572,42 @@ class Location(BoxLayout):
         self.label.texture_update() 
         self.label.size = self.label.texture_size
         self.region.tooltip._recalc_size()
+
+class Characters(StackLayout):
+    def __init__(self, ox, oy, **kwargs):
+        super().__init__(**kwargs)
+        self.ox = ox
+        self.oy = oy
+        with self.canvas.before:
+            Color(0.75, 0.75, 0.75, 0.75)
+            self.rect = Rectangle(size=self.size, pos=self.pos)
+
+    def _update_graphics(self, *args):
+        texture_aspect_ratio = self.parent.texture.width / self.parent.texture.height
+        container_aspect_ratio = self.parent.width / self.parent.height
+        if texture_aspect_ratio > container_aspect_ratio:
+            true_width = self.parent.width
+            true_height = self.parent.width / texture_aspect_ratio
+            true_x = self.parent.x
+            true_y = self.parent.y + (self.parent.height - true_height) / 2
+            scale = self.parent.width / self.parent.texture.width
+        else:
+            true_height = self.parent.height
+            true_width = self.parent.height * texture_aspect_ratio
+            true_x = self.parent.x + (self.parent.width - true_width) / 2
+            true_y = self.parent.y
+            scale = self.parent.height / self.parent.texture.height
+        cols = min(len(self.children), 3)
+        rows = (len(self.children) - 1) // 3 + 1
+        self.size = (48 * cols * scale, 48 * scale * rows)
+        self.pos = (true_x + self.ox * scale - self.width/2, self.parent.height - true_y - (self.oy - 10) * scale)
+        for child in self.children:
+            child.size = (48 * scale, 48 * scale)
+            child.tooltip_anchor = 48 * scale
+
+        self.rect.pos = (self.x, self.y + (3 * scale))
+        self.rect.size = (self.width, self.height - (6 * scale))
+        
 
 class Region(Widget):
     def __init__(self, ox, oy, osize, **kwargs):
