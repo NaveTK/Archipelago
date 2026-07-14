@@ -2,24 +2,16 @@ from .bases import TboiTestBase
 from ..game_data import data
 
 
-AREA_OPTION_TO_TYPE = {
-    "Alt Path": "alt",
-    "The Void": "void",
-    "Ascend": "ascend",
-    "Timed Areas": "timed",
-}
-
-
 class TestExcludedAreas(TboiTestBase):
     options = {
         "goals": {"Mother", "Delirium", "Beast", "Boss Rush"},
-        "excluded_areas": set(AREA_OPTION_TO_TYPE.keys()),
+        "excluded_areas": set(["Alt Path", "The Void", "Ascend", "Timed Areas"]),
     }
 
     def test_excluded_area_regions_unlocks_and_goals_are_removed(self) -> None:
         region_names = self.region_names()
         item_names = self.item_names()
-        excluded_types = set(AREA_OPTION_TO_TYPE.values())
+        excluded_types = set(["alt", "void", "ascend", "timed"])
 
         for region_name, region_data in data["regions"].items():
             if region_data.get("type") in excluded_types:

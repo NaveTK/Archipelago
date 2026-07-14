@@ -1,17 +1,14 @@
 from .bases import TboiTestBase
 
 
-BASE_LOGIC_OPTIONS = {
-    "goals": {"Mom"},
-    "trapdoor_logic": False,
-    "error_room_logic": False,
-    "sacrifice_room_logic": False,
-    "soul_of_cain_logic": False
-}
-
-
 class TestMainPathDependencies(TboiTestBase):
-    options = BASE_LOGIC_OPTIONS
+    options = {
+        "goals": {"Mom"},
+        "trapdoor_logic": False,
+        "error_room_logic": False,
+        "sacrifice_room_logic": False,
+        "soul_of_cain_logic": False
+    }
 
     def test_main_path_dependencies(self) -> None:
         dependencies = {
@@ -54,7 +51,11 @@ class TestMainPathDependencies(TboiTestBase):
 
 class TestShovelTrapdoorRoute(TboiTestBase):
     options = {
-        **BASE_LOGIC_OPTIONS,
+        "goals": {"Mom"},
+        "error_room_logic": False,
+        "sacrifice_room_logic": False,
+        "soul_of_cain_logic": False,
+
         "trapdoor_logic": True,
         "crawl_space": "any_shovel_logic",
     }
@@ -74,7 +75,11 @@ class TestShovelTrapdoorRoute(TboiTestBase):
 
 class TestEhwazTrapdoorRoute(TboiTestBase):
     options = {
-        **BASE_LOGIC_OPTIONS,
+        "goals": {"Mom"},
+        "error_room_logic": False,
+        "sacrifice_room_logic": False,
+        "soul_of_cain_logic": False,
+
         "trapdoor_logic": True,
         "crawl_space": "any_ehwaz_logic",
     }
@@ -94,7 +99,11 @@ class TestEhwazTrapdoorRoute(TboiTestBase):
 
 class TestDisabledEhwazTrapdoorRoute(TboiTestBase):
     options = {
-        **BASE_LOGIC_OPTIONS,
+        "goals": {"Mom"},
+        "error_room_logic": False,
+        "sacrifice_room_logic": False,
+        "soul_of_cain_logic": False,
+
         "trapdoor_logic": False,
         "crawl_space": "any_ehwaz_logic",
     }
@@ -114,7 +123,11 @@ class TestDisabledEhwazTrapdoorRoute(TboiTestBase):
 
 class TestUndefinedErrorRoomRoute(TboiTestBase):
     options = {
-        **BASE_LOGIC_OPTIONS,
+        "goals": {"Mom"},
+        "trapdoor_logic": False,
+        "sacrifice_room_logic": False,
+        "soul_of_cain_logic": False,
+
         "error_room_logic": True,
         "error_room": "any_undefined_logic",
         "ultra_secret_room": "no_progression",
@@ -138,7 +151,11 @@ class TestUndefinedErrorRoomRoute(TboiTestBase):
 
 class TestRedKeyErrorRoomRoute(TboiTestBase):
     options = {
-        **BASE_LOGIC_OPTIONS,
+        "goals": {"Mom"},
+        "trapdoor_logic": False,
+        "sacrifice_room_logic": False,
+        "soul_of_cain_logic": False,
+        
         "error_room_logic": True,
         "error_room": "no_progression",
         "ultra_secret_room": "any_red_key_logic",
@@ -162,7 +179,11 @@ class TestRedKeyErrorRoomRoute(TboiTestBase):
 
 class TestSacrificeRoomRoute(TboiTestBase):
     options = {
-        **BASE_LOGIC_OPTIONS,
+        "goals": {"Mom"},
+        "trapdoor_logic": False,
+        "error_room_logic": False,
+        "soul_of_cain_logic": False,
+        
         "sacrifice_room_logic": True,
     }
 
@@ -173,7 +194,11 @@ class TestSacrificeRoomRoute(TboiTestBase):
 
 class TestSoulOfCainRoute(TboiTestBase):
     options = {
-        **BASE_LOGIC_OPTIONS,
+        "goals": {"Mom"},
+        "trapdoor_logic": False,
+        "error_room_logic": False,
+        "sacrifice_room_logic": False,
+        
         "soul_of_cain_logic": True,
         "ultra_secret_room": "any_soul_of_cain_logic"
     }
@@ -202,7 +227,11 @@ class TestSoulOfCainRoute(TboiTestBase):
 
 class TestDisabledSoulOfCainRoute(TboiTestBase):
     options = {
-        **BASE_LOGIC_OPTIONS,
+        "goals": {"Mom"},
+        "trapdoor_logic": False,
+        "error_room_logic": False,
+        "sacrifice_room_logic": False,
+        
         "soul_of_cain_logic": False,
         "ultra_secret_room": "any_soul_of_cain_logic"
     }

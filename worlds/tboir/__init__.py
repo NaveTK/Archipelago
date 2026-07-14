@@ -134,27 +134,27 @@ class TboiWorld(World):
                                 skip_room = True
                     if skip_room: continue
                     room = data["rooms"][room_name]
-                    if "type" in room and room["type"] == "rng" and self.options.rng_rooms.value == 0: continue
-                    if "type" in room and room["type"] == "crawl_space" and self.options.crawl_space.value == 0: continue
-                    if "type" in room and room["type"] == "planetarium" and self.options.planetarium.value == 0: continue
-                    if "type" in room and room["type"] == "ultra_secret_room" and self.options.ultra_secret_room.value == 0: continue
-                    if "type" in room and room["type"] == "error_room" and self.options.error_room.value == 0: continue
+                    if "type" in room and room["type"] == "rng" and self.options.rng_rooms == "none": continue
+                    if "type" in room and room["type"] == "crawl_space" and self.options.crawl_space == "none": continue
+                    if "type" in room and room["type"] == "planetarium" and self.options.planetarium == "none": continue
+                    if "type" in room and room["type"] == "ultra_secret_room" and self.options.ultra_secret_room == "none": continue
+                    if "type" in room and room["type"] == "error_room" and self.options.error_room == "none": continue
                     location_name = f'{name} - {room_name}'
                     region.add_locations(self.create_location(location_name), TboiLocation)
                     if "type" in room and ( \
-                       (room["type"] == "rng" and self.options.rng_rooms.value == 1) or \
-                       (room["type"] == "crawl_space" and self.options.crawl_space.value == 1) or \
-                       (room["type"] == "planetarium" and self.options.planetarium.value == 1) or \
-                       (room["type"] == "ultra_secret_room" and self.options.ultra_secret_room.value == 1) or \
-                       (room["type"] == "error_room" and self.options.error_room.value == 1)):
+                       (room["type"] == "rng" and self.options.rng_rooms == "no_progression") or \
+                       (room["type"] == "crawl_space" and self.options.crawl_space == "no_progression") or \
+                       (room["type"] == "planetarium" and self.options.planetarium == "no_progression") or \
+                       (room["type"] == "ultra_secret_room" and self.options.ultra_secret_room == "no_progression") or \
+                       (room["type"] == "error_room" and self.options.error_room == "no_progression")):
                         add_item_rule(self.get_location(location_name),
                                 lambda item: (item.classification & ItemClassification.progression) == 0)
                     if "requires" in room:
                         if "type" in room and ( \
-                           (room["type"] == "crawl_space" and self.options.crawl_space.value >= 3) or \
-                           (room["type"] == "planetarium" and self.options.planetarium.value >= 3) or \
-                           (room["type"] == "ultra_secret_room" and self.options.ultra_secret_room.value >= 3) or \
-                           (room["type"] == "error_room" and self.options.error_room.value >= 3)):
+                           (room["type"] == "crawl_space" and self.options.crawl_space in ["any_shovel_logic", "any_ehwaz_logic"]) or \
+                           (room["type"] == "planetarium" and self.options.planetarium in ["any_telescope_lense_logic"]) or \
+                           (room["type"] == "ultra_secret_room" and self.options.ultra_secret_room in ["any_red_key_logic", "any_soul_of_cain_logic", "any_cracked_key_logic"]) or \
+                           (room["type"] == "error_room" and self.options.error_room in ["any_undefined_logic"])):
                             rule = self.rule_from_data(room["requires"])
                             self.set_rule(self.get_location(location_name), rule)
                             #add_rule(self.get_location(location_name),
@@ -225,13 +225,13 @@ class TboiWorld(World):
             if "type" in unlock and "void" in unlock["type"] and "The Void" in self.options.excluded_areas.value: continue
             if "type" in unlock and "ascend" in unlock["type"] and "Ascend" in self.options.excluded_areas.value: continue
             if "type" in unlock and "timed" in unlock["type"] and "Timed Areas" in self.options.excluded_areas.value: continue
-            if "type" in unlock and "shovel" in unlock["type"] and self.options.crawl_space.value != 3: continue
-            if "type" in unlock and "ehwaz" in unlock["type"] and self.options.crawl_space.value != 4: continue
-            if "type" in unlock and "telescope_lens" in unlock["type"] and self.options.planetarium.value != 3: continue
-            if "type" in unlock and "red_key" in unlock["type"] and self.options.ultra_secret_room.value != 3: continue
-            if "type" in unlock and "soul_of_cain" in unlock["type"] and self.options.ultra_secret_room.value != 4: continue
-            if "type" in unlock and "cracked_key" in unlock["type"] and self.options.ultra_secret_room.value != 5: continue
-            if "type" in unlock and "undefined" in unlock["type"] and self.options.error_room.value != 3: continue
+            if "type" in unlock and "shovel" in unlock["type"] and self.options.crawl_space != "any_shovel_logic": continue
+            if "type" in unlock and "ehwaz" in unlock["type"] and self.options.crawl_space != "any_ehwaz_logic": continue
+            if "type" in unlock and "telescope_lens" in unlock["type"] and self.options.planetarium != "any_telescope_lense_logic": continue
+            if "type" in unlock and "red_key" in unlock["type"] and self.options.ultra_secret_room != "any_red_key_logic": continue
+            if "type" in unlock and "soul_of_cain" in unlock["type"] and self.options.ultra_secret_room != "any_soul_of_cain_logic": continue
+            if "type" in unlock and "cracked_key" in unlock["type"] and self.options.ultra_secret_room != "any_cracked_key_logic": continue
+            if "type" in unlock and "undefined" in unlock["type"] and self.options.error_room != "any_undefined_logic": continue
             if "type" in unlock and "variant" in unlock["type"] and not self.options.floor_variations.value: continue
             self.multiworld.itempool.append(self.create_item(f'{name} Unlock'))
             own_items += 1
@@ -390,7 +390,7 @@ class TboiWorld(World):
             if len(self.goals) == 0:
                 self.goals = ['Mom']
 
-            if self.options.character_goals.value > 0:
+            if self.options.character_goals != "any":
                 available_characters = set(data["characters"]) - self.options.exclude_characters.value
                 if "Tainted" in self.options.exclude_characters.value:
                     available_characters = {c for c in available_characters if not c.startswith("Tainted")}
@@ -411,10 +411,10 @@ class TboiWorld(World):
 
                 new_goals = []
 
-                if self.options.character_goals.value == 1:
+                if self.options.character_goals == "single":
                     for goal in self.goals:
                         new_goals.append(f'{goal}|{available_characters.pop()}')
-                elif self.options.character_goals.value == 2:
+                elif self.options.character_goals == "grouped":
                     x = 0
                     for goal in self.goals:
                         character_amount_per_goal = -(-len(available_characters) // (len(self.goals)-x))

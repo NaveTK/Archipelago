@@ -182,6 +182,8 @@ class IsaacContext(SuperContext):
         if cmd in {"Connected"}:
             self.current_state = self.State.GATHERING_DATA
             self.options = args['slot_data']['options']
+
+            # These are fallbacks if the world was generated with an older version where the options did not exist yet
             if "goal_amount" not in self.options:
                 self.options["goal_amount"] = 0
             if "character_goals" not in self.options:
@@ -222,6 +224,7 @@ class IsaacContext(SuperContext):
                 self.options["start_out_nerfed"] = 0
             if "death_link" not in self.options:
                 self.options["death_link"] = False
+                
             if self.options["goal_amount"] == 0 or self.options["goal_amount"] > len(self.options["goals"]):
                 self.options["goal_amount"] = len(self.options["goals"])
             Utils.async_start(self.send_msgs([
