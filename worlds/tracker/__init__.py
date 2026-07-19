@@ -20,7 +20,11 @@ def launch_client(*args):
     from .TrackerClient import launch as TCMain
     launch(TCMain, name="Universal Tracker client", args=args)
 
-UT_VERSION = "v0.3.0"
+from Utils import tuplize_version
+
+UT_VERSION = "v0.3.1"
+
+UT_VERSION_TUPLE = tuplize_version(UT_VERSION[1:].split("-",1)[0])
 
 class CurrentTrackerState(NamedTuple):
     all_items: Counter
