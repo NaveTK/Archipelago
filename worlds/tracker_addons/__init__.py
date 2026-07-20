@@ -6,10 +6,26 @@ from MultiServer import mark_raw
 
 UT_FUNCTIONS:dict[str,Callable] = {}
 
-UT_ADDONS_VERSION = "v0.1.0"
+ADDONS_ERRORS:list[str] = []
+
+from Utils import tuplize_version
+
+UT_ADDONS_VERSION = "v0.1.1"
+
+UT_VERSION_TUPLE = tuplize_version(UT_ADDONS_VERSION[1:].split("-",1)[0])
 
 if TYPE_CHECKING:
     from worlds.tracker.TrackerClient import TrackerCommandProcessor
+
+from worlds.tracker import UT_VERSION_TUPLE
+if not UT_VERSION_TUPLE >= (0,3,1):
+    raise ImportError(f"UT Addons {UT_ADDONS_VERSION} is missing compatible UT")
+
+def register_function(name:str, func:Callable):
+    if name in UT_FUNCTIONS:
+        ADDONS_ERRORS.append(f"{func.__module__} tried to add function named '{name}' but one already exists from {UT_FUNCTIONS[name].__module__}")
+    else:
+        UT_FUNCTIONS[name] = func
 
 logger = logging.getLogger("Client")
 
@@ -117,8 +133,8 @@ def get_regions(self: "TrackerCommandProcessor", region_name: str=""):
 
 
 
-UT_FUNCTIONS["next_progression"] = next_progression
-UT_FUNCTIONS["get_depth"] = stupid_thing
-UT_FUNCTIONS["glp"] = glp
-UT_FUNCTIONS["nearest_locations"] = nearest_location
-UT_FUNCTIONS["get_regions"] = get_regions
+register_function("next_progression", next_progression)
+register_function("get_depth", stupid_thing)
+register_function("glp", glp)
+register_function("nearest_locations", nearest_location)
+register_function("get_regions", get_regions)
