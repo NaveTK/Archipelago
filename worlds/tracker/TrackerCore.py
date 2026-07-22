@@ -609,6 +609,8 @@ class TrackerCore():
                     self.multiworld = self.launch_multiworld
                     self.player_id = internal_id
                     self.regen_slots(self.get_current_world(), raw_slot_data)
+                elif False: #For those who came before
+                    raise "We remember o7"
                 else:
                     world_dict = {name: self.launch_multiworld.worlds[slot].game for name, slot in self.launch_multiworld.world_name_lookup.items()}
                     tb = f"Game missmatch for connected game '{self.game}'" + \
