@@ -486,8 +486,8 @@ async def game_watcher(ctx: IsaacContext):
             ctx.gui_error("ERROR", traceback.format_exc())
 
 
-async def main():
-    ctx = IsaacContext(None, None)
+async def main(args):
+    ctx = IsaacContext(args.connect, args.password)
     ctx.server_task = asyncio.create_task(server_loop(ctx), name="server loop")
 
     if tracker_loaded:
@@ -510,8 +510,11 @@ if __name__ == '__main__':
     asyncio.run(main())
     colorama.deinit()
 
-def launch():
+def launch(*launch_args):
+    from CommonClient import get_base_parser
+    parser = get_base_parser()
+    args = parser.parse_args(launch_args)
     # use colorama to display colored text highlighting
     colorama.just_fix_windows_console()
-    asyncio.run(main())
+    asyncio.run(main(args))
     colorama.deinit()
