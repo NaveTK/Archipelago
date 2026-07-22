@@ -76,14 +76,17 @@ class TrackerCommandProcessor(ClientCommandProcessor):
             for name, function in UT_FUNCTIONS.items():
                 if name not in self.commands:
                     function.__doc__ = f"Provided by : {function.__module__}\n{function.__doc__}"
-                    def temp_lambda(self,function:Callable=function,*args,**kwargs):
-                        if self.ctx.stored_data and self.ctx.stored_data.get("_read_race_mode",False):
-                            logger.info(f"{function.__name__} is disabled during Race Mode")
-                            return
-                        else:
-                            return function(self, *args, **kwargs)
-                    update_wrapper(temp_lambda,function)
-                    self.commands[name] = temp_lambda
+                    def temp_lambda(function:Callable=function):
+                        def inner(*args, **kwargs):
+                            if self.ctx.stored_data and self.ctx.stored_data.get("_read_race_mode",False):
+                                logger.info(f"{function.__name__} is disabled during Race Mode")
+                                return
+                            else:
+                                return function(*args,**kwargs)
+                        return inner
+                    new_function = temp_lambda(function)
+                    update_wrapper(new_function,function)
+                    self.commands[name] = new_function
         except ImportError as e:
             pass #just ignore it if it doesn't work, it's fine
 
