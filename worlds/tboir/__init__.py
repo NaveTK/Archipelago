@@ -14,9 +14,9 @@ from .options import TboiOptions
 from worlds.AutoWorld import WebWorld, World
 from .game_data import data
 
-def launch_client():
+def launch_client(*args):
     from . import client
-    launch_subprocess(client.launch, name="Isaac Client")
+    launch_subprocess(client.launch, name="Isaac Client", args=args)
 
 components.append(Component("Isaac Client",
                             func=launch_client,
