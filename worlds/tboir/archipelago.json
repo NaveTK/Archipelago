@@ -1,6 +1,11 @@
 {
     "game": "The Binding of Isaac Repentance",
-    "world_version": "0.4.3",
+    "world_version": "0.4.4",
     "minimum_ap_version": "0.6.7",
-    "authors": ["NaveTK"]
+    "authors": ["NaveTK"],
+    "igdb_id": 109241,
+    "license": "MIT",
+    "repo_url": "https://github.com/NaveTK/Archipelago",
+    "flags": ["tracker_included", "supports_deathlink"],
+    "ai_disclosure": "none"
 }

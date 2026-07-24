@@ -136,8 +136,7 @@ class IsaacContext(SuperContext):
         supported_client_file = os.path.join(self.settings.game_folder, "mods", potential_mod_dirs[0], "supported_client")
         if os.path.isfile(supported_client_file):
             with open(supported_client_file, "r", encoding="utf-8") as f:
-                v_nums = f.read().split('.')
-                v = Utils.Version(int(v_nums[0]),int(v_nums[1]),int(v_nums[2]))
+                v = Utils.tuplize_version(f.read())
                 if v < self.client_version:
                     self.gui_error("Mod to old", "Your Archipelago of Isaac mod seems to be outdated. Please updated it to the newest version.")
                     return
