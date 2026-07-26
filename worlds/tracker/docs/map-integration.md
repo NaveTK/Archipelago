@@ -32,6 +32,8 @@ class MyWorld(World):
         "map_page_locations": <Location(s) of the locations.json file(s) relative to the root folder of the pack, may be a list if more than one file exists>
         "map_page_layouts": <Location(s) of the layout.json relative to the root folder of the pack, may be a list if more than one file exists. Mutually exclusive with map_page_groups>
         "map_page_groups": <optional list that manually defines the map navigation dropdown structure. Mutually exclusive with map_page_layouts>
+        "map_page_items": <optional location(s) of the items.json file(s) relative to the root folder of the pack, may be a list if more than one file exists>
+        "map_page_item_layouts": <option list of ItemLayoutConfiguration items to define the layout of the item tracker>
         "map_page_setting_key": <optional tag that informs which data storage key will be watched for auto tabbing>
         "map_page_index": <optional function that will control the auto tabbing>
         "poptracker_name_mapping": <optional Dict that maps the poptracker section names to the location id as they exist in the datapackage> 
