@@ -88,5 +88,5 @@ It does not "hurt" your save, however, you can still unlock new things with the 
 Currently no support for multiplayer has been implemented. It will not crash the game or anything but probably won't be the experience you imagine.
 
 ## Is Archipelago compatible with other The Binding of Isaac: Repentance mods?
-It is compatible with most visual, small or QoL mods. Bigger mods that add a significant amount of new content should be avoided.
-However, mods in general, no matter how big or small, have the ability to interfere with the Archipelago mod. Therefore, if you encounter issues with some of the AP functionality not working as expected, like locations not being checked, death link not triggering or not receiving items from the server, then those issues may be caused by another mod interfering and it's up to you to figure out which one.
+It is compatible with most visual, small or QoL mods. Bigger mods that add a significant amount of new content should be avoided.  
+However, mods in general, no matter how big or small, have the ability to interfere with the Archipelago mod. Therefore, if you encounter issues with some of the AP functionality not working as expected, like locations not being checked, death link not triggering or not receiving items from the server, then those issues may be caused by another mod interfering.
