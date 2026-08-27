@@ -45,7 +45,7 @@ As the game is not officially supported yet. Please use the new Options Creator 
 2. Select a save file with a sufficient progression state
 3. Ensure **The Archipelago of Isaac** is enabled in the mod menu
 4. Start a run with any character
-5. Open the **Isaac Client** in your Archipelago Launcher
+5. Open the **Isaac Client** in your Archipelago Launcher (If you are unable to find the Isaac Client in your launcher, confirm that the tboir.apworld is installed and restart the launcher once)
 6. Input the address and port for the MultiWorld Server
 7. Click **Connect**
 8. Enter your slot name and which save file you're playing on when prompted
