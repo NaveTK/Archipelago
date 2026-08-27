@@ -1,6 +1,8 @@
 # Setup Guide for The Binding of Isaac: Repentance
 
 ## Required Software
+- The Archipelago Launcher (Minimum version 0.6.7)
+  - [GitHub](https://github.com/ArchipelagoMW/Archipelago/releases/latest)
 - The Binding of Isaac: Rebirth including all DLC's up to Repentance or Repentance+
   - [Steam](https://store.steampowered.com/bundle/2405/The_Binding_of_Isaac_Rebirth_Complete_Bundle/)
 - A save file where the paths to all the endgame bosses are unlocked
