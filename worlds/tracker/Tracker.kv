@@ -26,19 +26,35 @@
         adaptive_size: True
         text: root.text
 
+<ItemTracker>:
+    AnchorLayout:
+        size_hint: 1, 1
+        anchor_x: "center"
+        ScrollView:
+            do_scroll_x: False
+            do_scroll_y: True
+            size_hint: None, None
+            height: root.height
+            width: root.minimum_width
+            StackLayout:
+                size_hint: 1, None
+                size: self.minimum_size
+                spacing: 2
+                id: item_tracker_full
+
 <VisualTracker>:
     BoxLayout:
         ScrollView:
             do_scroll_x: False
             do_scroll_y: True
             size_hint: None, None
+            width: 0
             height: root.height
-            id: item_tracker
             StackLayout:
                 size_hint: 1, None
                 size: self.minimum_size
                 spacing: 2
-                id: item_tracker_groups
+                id: item_tracker_left
         BoxLayout:
             orientation: "vertical"
             BoxLayout:
@@ -84,6 +100,29 @@
                 canvas.after:
                     #close transformations in after canvas so all objects get transformed
                     PopMatrix:
+            ScrollView:
+                do_scroll_x: True
+                do_scroll_y: False
+                size_hint: None, None
+                width: self.parent.width
+                height: 0
+                StackLayout:
+                    orientation: "tb-lr"
+                    size_hint: None, 1
+                    size: self.minimum_size
+                    spacing: 2
+                    id: item_tracker_bottom
+        ScrollView:
+            do_scroll_x: False
+            do_scroll_y: True
+            size_hint: None, None
+            width: 0
+            height: root.height
+            StackLayout:
+                size_hint: 1, None
+                size: self.minimum_size
+                spacing: 2
+                id: item_tracker_right
 
 <UTTextColor>:
     in_logic: "20ff20"
@@ -199,18 +238,20 @@
 
 <ApItemGridHeader>:
     bold: True
-    size_hint: 1, None
+    size_hint: None, None
     size: self.texture_size
-    padding: 2
-    canvas.before:
-        Color:
-            rgba: app.theme_cls.surfaceContainerHighColor
-        Rectangle:
-            size: self.size
-            pos: self.pos
+    padding: 4
 
 <ApItemGrid>:
     size_hint: None, None
 
 <ApItemIcon>:
     size_hint: None, None
+
+    canvas.after:
+        Color: 
+            rgb: self.marker_color
+            a: self.marker_alpha
+        Line:
+            width: 1
+            rectangle: self.x + 1, self.y + 1, self.width - 2, self.height - 2

@@ -121,8 +121,8 @@ class TrackerSettings(Group):
     sorting_method: SortingMethod | str = "apworld"
 
 class ItemLayoutConfiguration:
-    name: str
-    item_groups: list[str] | None
+    name: str | None
+    items: list[str]
     orientation: Literal["tb", "lr"]
     cols: int
     rows: int
@@ -130,15 +130,15 @@ class ItemLayoutConfiguration:
     item_width: int
     item_height: int
 
-    def __init__(self, name: str, item_groups: str | list[str] | None = None, 
+    def __init__(self, items: str | list[str],name: str | None = None,  
                  orientation: Literal["tb", "lr"] = "lr", 
                  cols: int = 5, rows: int = -1, 
                  item_size: tuple[int, int] = (48,48)):
         self.name = name
-        if isinstance(item_groups, str):
-            self.item_groups = [ item_groups ]
+        if isinstance(items, str):
+            self.items = [ items ]
         else:
-            self.item_groups = item_groups
+            self.items = items
         self.orientation = orientation
         self.cols = cols
         self.rows = rows
@@ -175,10 +175,19 @@ class UTMapTabData:
     map_page_groups: list[tuple[str, list]]
     """Map page groups. Mutually exclusive with map_page_layouts"""
 
-    map_page_items: list[str]
+    item_page_items: list[str]
     """The relative paths within the map_page_folder of the items.json"""
 
-    map_page_item_layouts: list[ItemLayoutConfiguration]
+    map_page_item_layouts_left: list[ItemLayoutConfiguration]
+    """A list of configuration objects describing the layout of the left item panel on the map page"""
+
+    map_page_item_layouts_right: list[ItemLayoutConfiguration]
+    """A list of configuration objects describing the layout of the right item panel on the map page"""
+
+    map_page_item_layouts_bottom: list[ItemLayoutConfiguration]
+    """A list of configuration objects describing the layout of the bottom item panel on the map page"""
+
+    item_page_item_layouts: list[ItemLayoutConfiguration]
     """A list of configuration objects describing the layout of the item tracker"""
 
     map_page_setting_key: str
@@ -205,14 +214,32 @@ class UTMapTabData:
     def __init__(
             self, player_id, team_id, map_page_folder: str = "", map_page_maps: list[str] | str = "",
             map_page_locations: list[str] | str = "", map_page_layouts: list[str] | str | None = None,
-            map_page_groups: list[tuple[str, list]] | None  = None,
-            map_page_items: list[str] | str = "", map_page_item_layouts: list[ItemLayoutConfiguration] | None = None,
+            map_page_groups: list[tuple[str, list]] | None  = None, item_page_items: list[str] | str = "", 
+            map_page_item_layouts_left: list[ItemLayoutConfiguration] | None = None,
+            map_page_item_layouts_right: list[ItemLayoutConfiguration] | None = None,
+            map_page_item_layouts_bottom: list[ItemLayoutConfiguration] | None = None,
+            item_page_item_layouts: list[ItemLayoutConfiguration] | None = None,
             map_page_setting_key: str | None = None, map_page_index: Callable[[Any], int] | None = None,
             external_pack_key: str = "", poptracker_name_mapping: dict[str, int] | None = None,
             location_setting_key: str|None = None,
             location_icon_coords: Callable[[int, Any], tuple[int,int]]|None= None,
             poptracker_entrance_mapping: dict[str, str]|None = None, **kwargs):
 
+        item_page_items = "items/items.json"
+        map_page_item_layouts_left = [
+            ItemLayoutConfiguration(items="Lord Souls",         name="Progression Items",   orientation="lr", cols=4),
+            ItemLayoutConfiguration(items="Lordvessel",                                     orientation="lr", cols=1),
+            ItemLayoutConfiguration(items=["Key items", "Progression Items"],               orientation="lr", cols=4)
+        ]
+        map_page_item_layouts_bottom = [
+            ItemLayoutConfiguration(items="Fog Wall Keys",      name="Fog Walls",           orientation="tb", rows=1, item_size=(36, 48)),
+            ItemLayoutConfiguration(items="Boss Fog Wall Keys", name="Boss Fog Walls",      orientation="tb", rows=1, item_size=(36, 48))
+        ]
+
+        item_page_item_layouts = [
+            ItemLayoutConfiguration(items="Everything",         name="All Items",           orientation="lr", cols=12, item_size=(64, 64))
+        ]
+        
         self.map_page_folder = map_page_folder
         if isinstance(map_page_maps, str):
             self.map_page_maps = [map_page_maps]
@@ -229,14 +256,26 @@ class UTMapTabData:
         else:
             self.map_page_layouts = []
         self.map_page_groups = map_page_groups
-        if isinstance(map_page_items, str):
-            self.map_page_items = [map_page_items]
+        if isinstance(item_page_items, str):
+            self.item_page_items = [item_page_items]
         else:
-            self.map_page_items = map_page_items
-        if map_page_item_layouts == None:
-            self.map_page_item_layouts = [ ItemLayoutConfiguration(name="Items") ]
+            self.item_page_items = item_page_items
+        if map_page_item_layouts_left:
+            self.map_page_item_layouts_left = map_page_item_layouts_left
         else:
-            self.map_page_item_layouts = map_page_item_layouts
+            self.map_page_item_layouts_left = []
+        if map_page_item_layouts_right:
+            self.map_page_item_layouts_right = map_page_item_layouts_right
+        else:
+            self.map_page_item_layouts_right = []
+        if map_page_item_layouts_bottom:
+            self.map_page_item_layouts_bottom = map_page_item_layouts_bottom
+        else:
+            self.map_page_item_layouts_bottom = []
+        if item_page_item_layouts:
+            self.item_page_item_layouts = item_page_item_layouts
+        else:
+            self.item_page_item_layouts = []
         self.map_page_setting_key = map_page_setting_key
         if isinstance(self.map_page_setting_key, str):
             self.map_page_setting_key = self.map_page_setting_key.format(player=player_id, team=team_id)
