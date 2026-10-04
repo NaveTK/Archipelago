@@ -1,6 +1,6 @@
 from BaseClasses import CollectionState
 from collections import defaultdict, Counter
-from typing import Callable, TYPE_CHECKING
+from typing import Callable, TYPE_CHECKING, Any
 import logging
 from MultiServer import mark_raw
 
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Client")
 
-peek_stack = []
+peek_stack:list[Any] = []
 
 def peek_reset(self: "TrackerCommandProcessor"):
     """Reset the peek to the tracked world"""
@@ -20,7 +20,44 @@ def peek_reset(self: "TrackerCommandProcessor"):
         return
     world = self.ctx.tracker_core.get_current_world()
     peek_stack = [world]
-    
+
+@mark_raw
+def peek_get_region(self: "TrackerCommandProcessor", argument:str=""):
+    """Shortcut to go to a region directly"""
+    global peek_stack
+    peek_reset(self)
+    if len(peek_stack) < 1:
+        return #Already sent the error message
+    world = peek_stack[0] #there should always be one item here
+    assert world
+    if argument in world.multiworld.regions.region_cache[world.player]:
+        peek_stack.append(world.get_region(argument))
+
+@mark_raw
+def peek_get_location(self: "TrackerCommandProcessor", argument:str=""):
+    """Shortcut to go to a region directly"""
+    global peek_stack
+    peek_reset(self)
+    if len(peek_stack) < 1:
+        return #Already sent the error message
+    world = peek_stack[0] #there should always be one item here
+    assert world
+    if argument in world.multiworld.regions.location_cache[world.player]:
+        peek_stack.append(world.get_location(argument))
+
+@mark_raw
+def peek_get_entrance(self: "TrackerCommandProcessor", argument:str=""):
+    """Shortcut to go to a region directly"""
+    global peek_stack
+    peek_reset(self)
+    if len(peek_stack) < 1:
+        return #Already sent the error message
+    world = peek_stack[0] #there should always be one item here
+    assert world
+    if argument in world.multiworld.regions.entrance_cache[world.player]:
+        peek_stack.append(world.get_entrance(argument))
+
+
 def peek_up(self: "TrackerCommandProcessor"):
     """Go up the peek stack"""
     global peek_stack
@@ -143,7 +180,43 @@ def peek_dir(self: "TrackerCommandProcessor"):
     current = peek_stack[-1]
     logger.info(str(dir(current)))
 
+def peek_rule(self: "TrackerCommandProcessor"):
+    """Check the `access_rule` attribute of the current object"""
+    global peek_stack
+    if len(peek_stack) < 1:
+        logger.error("Debug tools not initalized, please run peek_reset to start debug tools")
+        return
+    current = peek_stack[-1]
+    assert current
+    if hasattr(current, "access_rule"):
+        state = self.ctx.updateTracker().state
+        if state:
+            logger.info(f"access_rule returns : {str(current.access_rule(state))}")
+            if hasattr(current.access_rule,"explain_json"):
+                self.ctx.print_json(current.access_rule.explain_json(state))
+
+def peek_grule(self: "TrackerCommandProcessor"):
+    """Check the `access_rule` attribute of the current object, but with the glitched state"""
+    global peek_stack
+    if len(peek_stack) < 1:
+        logger.error("Debug tools not initalized, please run peek_reset to start debug tools")
+        return
+    current = peek_stack[-1]
+    assert current
+    if hasattr(current, "access_rule"):
+        state = self.ctx.updateTracker().glitches_state
+        if state:
+            logger.info(f"access_rule returns : {str(current.access_rule(state))}")
+            if hasattr(current.access_rule,"explain_json"):
+                self.ctx.print_json(current.access_rule.explain_json(state))
+
+
+
+
 register_function("peek_reset", peek_reset)
+register_function("peek_get_region", peek_get_region)
+register_function("peek_get_location", peek_get_location)
+register_function("peek_get_entrance", peek_get_entrance)
 register_function("peek_down", peek_down)
 register_function("peek_up", peek_up)
 register_function("peek", peek)
@@ -153,3 +226,5 @@ register_function("peek_pp",peek_pp)
 register_function("peek_len", peek_len)
 register_function("peek_keys", peek_keys)
 register_function("peek_dir", peek_dir)
+register_function("peek_rule", peek_rule)
+register_function("peek_grule", peek_grule)

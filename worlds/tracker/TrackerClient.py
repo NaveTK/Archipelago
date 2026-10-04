@@ -8,7 +8,7 @@ import sys
 from typing import Union, TYPE_CHECKING
 
 
-from BaseClasses import CollectionState, Location
+from BaseClasses import CollectionState, Location, LocationProgressType
 from Utils import __version__, async_start, open_filename, persistent_load, persistent_store
 import Utils
 from worlds import AutoWorld
@@ -16,7 +16,7 @@ from . import ItemLayoutConfiguration, TrackerWorld, UTMapTabData, CurrentTracke
 from .TrackerCore import TrackerCore
 from collections import Counter, defaultdict
 from MultiServer import mark_raw
-from NetUtils import NetworkItem
+from NetUtils import NetworkItem, JSONMessagePart
 
 try:
     from Utils import gui_enabled
@@ -306,7 +306,7 @@ class TrackerCommandProcessor(ClientCommandProcessor):
         if self.ctx.game:
             connected_cls = AutoWorld.AutoWorldRegister.world_types.get(self.ctx.game)
             if self.ctx.checksums[self.ctx.game] != connected_cls.get_data_package_data()["checksum"]:
-                logger.error(f"Local checksum = {self.ctx.checksums[self.ctx.game]} | remote checksum = {connected_cls.get_data_package_data()['checksum']}")
+                logger.error(f"Local checksum = {connected_cls.get_data_package_data()['checksum']} | remote checksum = {self.ctx.checksums[self.ctx.game]}")
 
 def cmd_load_map(self: TrackerCommandProcessor, map_id: str = "0"):
     """Force a poptracker map id to be loaded"""
@@ -409,6 +409,9 @@ class TrackerGameContext(CommonContext):
         self.tracker_core.set_clear_page(self.clear_page)
         self.tracker_core.set_get_ut_color(get_ut_color)
 
+    def print_json(self, packets: list[JSONMessagePart]):
+        self.on_print_json({"data":packets}) # I hate this
+
     def updateTracker(self) -> CurrentTrackerState:
         if self.disconnected_intentionally: return CurrentTrackerState.init_empty_state()
         self.tracker_core.set_missing_locations(self.missing_locations)
@@ -425,6 +428,7 @@ class TrackerGameContext(CommonContext):
             async_start(self.disconnect(False), name="disconnecting")
             raise e
         if updateTracker_ret.state is None:
+            if self.tracker_page is not None: self.tracker_page.addLine("Something went wrong, run /faris_asked and post the result in the Universal Tracker discord channel", False)
             return updateTracker_ret # core.updateTracker failed, just pass it along
         current_world = self.tracker_core.get_current_world()
         if current_world is None:
@@ -514,11 +518,11 @@ class TrackerGameContext(CommonContext):
             self.tracker_hinted_locs_label.text = f"Hinted: [color={get_ut_color('hinted_in_logic')}]{len(updateTracker_ret.hinted_locations)}[/color]"
         if hasattr(self, "tracker_go_mode_label"):
             if self.tracker_core.multiworld.has_beaten_game(updateTracker_ret.state,current_world.player):
-                self.tracker_go_mode_label.text = f"Go mode: [color={get_ut_color("in_logic")}]Yes[/color]"
+                self.tracker_go_mode_label.text = f"Go mode: [color={get_ut_color('in_logic')}]Yes[/color]"
             elif updateTracker_ret.glitches_state and self.tracker_core.multiworld.has_beaten_game(updateTracker_ret.glitches_state,current_world.player):
-                self.tracker_go_mode_label.text = f"Go mode: [color={get_ut_color("glitched")}]Glitched[/color]"
+                self.tracker_go_mode_label.text = f"Go mode: [color={get_ut_color('glitched')}]Glitched[/color]"
             else:
-                self.tracker_go_mode_label.text = f"Go mode: [color={get_ut_color("out_of_logic")}]No[/color]"
+                self.tracker_go_mode_label.text = f"Go mode: [color={get_ut_color('out_of_logic')}]No[/color]"
 
         return updateTracker_ret
 
@@ -731,8 +735,12 @@ class TrackerGameContext(CommonContext):
         self.ui.loc_border = m["location_border_thickness"] if "location_border_thickness" in m else 8  # default location size per poptracker/src/core/map.h
         temp_locs = [location for location in self.locs]
         map_locs = []
-        hidden_locations = getattr(self.tracker_core.get_current_world(), "ut_map_page_hidden_locations", {})
-        current_hidden_locs = hidden_locations.get(m["name"], [])
+        current_world = self.tracker_core.get_current_world()
+        assert current_world
+        hidden_locations = getattr(current_world, "ut_map_page_hidden_locations", {})
+        current_hidden_locs:list[str] = hidden_locations.get(m["name"], [])
+        if self.hide_excluded:
+            current_hidden_locs.extend([loc.name for loc in current_world.get_locations() if loc.address is not None and loc.progress_type == LocationProgressType.EXCLUDED])
         while temp_locs:
             temp_loc = temp_locs.pop()
             if "map_locations" in temp_loc:
@@ -880,10 +888,52 @@ class TrackerGameContext(CommonContext):
         from kivy.uix.behaviors import ButtonBehavior
         from kivymd.uix.tooltip import MDTooltip
         from kivy.uix.widget import Widget
+        from kivy.uix.scatterlayout import ScatterLayout
+        from kivy.uix.stencilview import StencilView
+        from kivy.graphics.transformation import Matrix
         from kivy.properties import StringProperty, NumericProperty, BooleanProperty
         from kivy.metrics import dp
         from kvui import ApAsyncImage, ToolTip
         from .TrackerKivy import SomethingNeatJustToMakePythonHappy
+
+        class BoxStencil(BoxLayout, StencilView):
+            pass
+
+        # ScatterLayout allows for panning with mouse but not scrolling to zoom (only multi-finger pinch)
+        # so we add our own mouse scroll handler
+        class ScrollWheelZoomScatterLayout(ScatterLayout):
+            zoomOutFactor = 1.1
+            zoomInFactor = 1 / zoomOutFactor
+            def on_touch_down(self, touch):
+                if self.parent and not self.parent.collide_point(*touch.pos):
+                    return False
+                # Kind of confusing but mouse scroll is under touch
+                if touch.is_mouse_scrolling:
+                    factor = self.zoomInFactor if touch.button == 'scrollup' else self.zoomOutFactor
+                    # Check if new zoom is within limits so user is less likely to lose the map
+                    if self.scale_min <= self.scale * factor <= self.scale_max:
+                        mat = Matrix().scale(factor, factor, 1)
+                        self.apply_transform(mat, anchor=touch.pos)
+                    return True
+                return super().on_touch_down(touch)
+
+            # We have to overwrite all the touch actions to return False since otherwise it blocks
+            # clicks to other UI elements, even when it's clipped by the stencil view. Not sure
+            # if Kivy has a better way to keep the scatterlayout from escaping its view.
+            def on_touch_move(self, touch):
+                if touch in self._touches:
+                    return super().on_touch_move(touch)
+                return False
+
+            def on_touch_up(self, touch):
+                if touch in self._touches:
+                    return super().on_touch_up(touch)
+                return False
+
+            def recenter_view(self):
+                self.scale = 1.0
+                self.pos = (0, 0)
+                self.transform = Matrix()
 
         class CheckItem(BoxLayout):
             text = StringProperty()
@@ -1735,7 +1785,7 @@ class TrackerGameContext(CommonContext):
                     return
                 if self.checksums[self.game] != connected_cls.get_data_package_data()["checksum"]:
                     logger.warning("*****\nWarning: the local datapackage for the connected game does not match the server's datapackage\n*****")
-                    logger.error(f"Local checksum = {self.checksums[self.game]} | remote checksum = {connected_cls.get_data_package_data()['checksum']}")
+                    logger.error(f"Local checksum = {connected_cls.get_data_package_data()['checksum']} | remote checksum = {self.checksums[self.game]}")
                 self.tracker_core.initalize_tracker_core(connected_cls,args["slot_data"])
                 if self.tracker_core.tracker_disabled:
                     logger.error("World Author has requested UT be disabled on this world, please respect their decision")
@@ -1949,7 +1999,6 @@ def load_json_zip(pack, path):
             return json.loads(childFile.read().decode('utf-8-sig'))
 
 def explain_more(ctx: TrackerGameContext, argument: str):
-    from NetUtils import JSONMessagePart
     if ctx.tracker_core.player_id is None or ctx.tracker_core.multiworld is None:
         logger.error("Player YAML not installed of Generator failed")
         ctx.set_page(f"Check Player YAMLs for error; Tracker {UT_VERSION} for AP version {__version__}")
@@ -1963,17 +2012,16 @@ def explain_more(ctx: TrackerGameContext, argument: str):
         returned_json = current_world.explain_more(argument, state)
         if returned_json:
             if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
-                ctx.ui.print_json(returned_json)
+                ctx.print_json(returned_json)
             else:
                 for message in returned_json:
-                    ctx.ui.print_json(message)
+                    ctx.print_json(message)
             return
         logger.info("Nothing to explain")
     logger.error("Current world to track doesn't support command /explain_more")
 
 
 def explain(ctx: TrackerGameContext, dest_name: str):
-    from NetUtils import JSONMessagePart
     if ctx.tracker_core.player_id is None or ctx.tracker_core.multiworld is None:
         logger.error("Player YAML not installed or Generator failed")
         ctx.set_page(f"Check Player YAMLs for error; Tracker {UT_VERSION} for AP version {__version__}")
@@ -1988,19 +2036,19 @@ def explain(ctx: TrackerGameContext, dest_name: str):
         returned_json = current_world.explain_rule(dest_name,state)
         if returned_json:
             if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
-                ctx.ui.print_json(returned_json)
+                ctx.print_json(returned_json)
             else:
                 for message in returned_json:
-                    ctx.ui.print_json(message)
+                    ctx.print_json(message)
             return
         elif tracker_struct.glitches_state is not None: #if this is None don't bother
             returned_json = current_world.explain_rule(dest_name,tracker_struct.glitches_state)
             if returned_json:
                 if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
-                    ctx.ui.print_json(returned_json)
+                    ctx.print_json(returned_json)
                 else:
                     for message in returned_json:
-                        ctx.ui.print_json(message)
+                        ctx.print_json(message)
                 return
 
     from Utils import get_intended_text
@@ -2019,7 +2067,7 @@ def explain(ctx: TrackerGameContext, dest_name: str):
             return
         location = ctx.tracker_core.multiworld.get_location(dest_name, ctx.tracker_core.player_id)
         if hasattr(location.access_rule,"explain_json"):
-            ctx.ui.print_json(location.access_rule.explain_json(state))
+            ctx.print_json(location.access_rule.explain_json(state))
         elif location.access_rule is Location.access_rule:
             logger.info("Location has a default access rule")
         else:
@@ -2038,9 +2086,9 @@ def explain(ctx: TrackerGameContext, dest_name: str):
                 if hasattr(entrance.access_rule,"explain_json"):
                     returned_json:list[JSONMessagePart] = [{"type":"text","text":f"{entrance.parent_region.name} ({entrance.parent_region.can_reach(state)}): {entrance.name} : "}]
                     returned_json.extend(entrance.access_rule.explain_json(state))
-                    ctx.ui.print_json(returned_json)
+                    ctx.print_json(returned_json)
                 else:
-                    ctx.ui.print_json([{"type":"text","text":f"{entrance.parent_region.name} ({entrance.parent_region.can_reach(state)}): {entrance.name} : {entrance.access_rule(state)}"}])
+                    ctx.print_json([{"type":"text","text":f"{entrance.parent_region.name} ({entrance.parent_region.can_reach(state)}): {entrance.name} : {entrance.access_rule(state)}"}])
 
 
 def get_logical_path(ctx: TrackerGameContext, dest_name: str):
@@ -2053,6 +2101,7 @@ def get_logical_path(ctx: TrackerGameContext, dest_name: str):
         return
     relevent_region = None
     relevent_location = None
+    relevent_entrance = None
     tracker_struct = ctx.updateTracker()
     state = None
     current_world = ctx.tracker_core.get_current_world()
@@ -2063,31 +2112,32 @@ def get_logical_path(ctx: TrackerGameContext, dest_name: str):
         returned_json = current_world.get_logical_path(dest_name,state)
         if returned_json:
             if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
-                ctx.ui.print_json(returned_json)
+                ctx.print_json(returned_json)
             else:
                 for message in returned_json:
-                    ctx.ui.print_json(message)
+                    ctx.print_json(message)
             return
         elif tracker_struct.glitches_state is not None: #if this is None don't bother
             returned_json = current_world.get_logical_path(dest_name,tracker_struct.glitches_state)
             if returned_json:
                 if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
-                    ctx.ui.print_json(returned_json)
+                    ctx.print_json(returned_json)
                 else:
                     for message in returned_json:
-                        ctx.ui.print_json(message)
+                        ctx.print_json(message)
                 return
 
     from Utils import get_intended_text
     location_names = set(ctx.tracker_core.multiworld.regions.location_cache[ctx.tracker_core.player_id])
     region_names = set(ctx.tracker_core.multiworld.regions.region_cache[ctx.tracker_core.player_id])
-    result, usable, response = get_intended_text(dest_name, location_names.union(region_names))
+    entrance_names = set(ctx.tracker_core.multiworld.regions.entrance_cache[ctx.tracker_core.player_id])
+    result, usable, response = get_intended_text(dest_name, location_names.union(region_names).union(entrance_names))
     if not usable:
         logger.error(response)
         return
     dest_name = result
     if dest_name in location_names:
-        location = ctx.tracker_core.multiworld.get_location(dest_name, ctx.tracker_core.player_id)
+        location = current_world.get_location(dest_name)
         state = tracker_struct.state
         if not state: return
         if location.can_reach(state):
@@ -2097,18 +2147,31 @@ def get_logical_path(ctx: TrackerGameContext, dest_name: str):
             relevent_region = location.parent_region
             relevent_location = location
             state = tracker_struct.glitches_state
-            ctx.ui.print_json([{"type":"text","text":"using "},{"type":"color","color":"yellow","text":"Glitches:"}])
+            ctx.print_json([{"type":"text","text":"using "},{"type":"color","color":"yellow","text":"Glitches:"}])
     elif dest_name in region_names:
-        relevent_region = ctx.tracker_core.multiworld.get_region(dest_name,ctx.tracker_core.player_id)
+        relevent_region = current_world.get_region(dest_name)
         state = tracker_struct.state
         if not state: return
         if relevent_region.can_reach(state):
             pass #it's easier to write this stack like this
         elif tracker_struct.glitches_state and relevent_region.can_reach(tracker_struct.glitches_state):
             state = tracker_struct.glitches_state
-            ctx.ui.print_json([{"type":"text","text":"using "},{"type":"color","color":"yellow","text":"Glitches:"}])
+            ctx.print_json([{"type":"text","text":"using "},{"type":"color","color":"yellow","text":"Glitches:"}])
         else: #all else fails, we need to give up
             relevent_region = None
+    elif dest_name in entrance_names:
+        entrance = current_world.get_entrance(dest_name)
+        state = tracker_struct.state
+        if not state: return
+        if not entrance.parent_region: return
+        if entrance.can_reach(state):
+            relevent_region = entrance.parent_region
+            relevent_entrance = entrance
+        elif tracker_struct.glitches_state and entrance.can_reach(tracker_struct.glitches_state):
+            relevent_region = entrance.parent_region
+            relevent_entrance = entrance
+            state = tracker_struct.glitches_state
+            ctx.print_json([{"type":"text","text":"using "},{"type":"color","color":"yellow","text":"Glitches:"}])
     else:
         logger.error(response)
         return
@@ -2142,31 +2205,47 @@ def get_logical_path(ctx: TrackerGameContext, dest_name: str):
                             continue
                         if returned_json:
                             if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
-                                ctx.ui.print_json(returned_json)
+                                ctx.print_json(returned_json)
                             else:
                                 for message in returned_json:
-                                    ctx.ui.print_json(message)
+                                    ctx.print_json(message)
                             continue
                     returned_json = [{"type":"color","color":"blue","text":v}]
                     if hasattr(ent.access_rule,"explain_json"):
                         returned_json.append({"type":"text","text":":\n    "})
                         returned_json.extend(ent.access_rule.explain_json(state))
-                    ctx.ui.print_json(returned_json)
+                    ctx.print_json(returned_json)
             if relevent_location:
                 if hasattr(current_world,"explain_spot"):
                     returned_json = current_world.explain_spot(relevent_location,state)
                     if returned_json:
                         if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
-                            ctx.ui.print_json(returned_json)
+                            ctx.print_json(returned_json)
                         else:
                             for message in returned_json:
-                                ctx.ui.print_json(message)
+                                ctx.print_json(message)
                         return
                 returned_json = [{"type":"text","text":"->"},{"type":"color","color":"green","text":relevent_location.name}]
                 if hasattr(relevent_location.access_rule,"explain_json"):
                     returned_json.append({"type":"text","text":":\n    "})
                     returned_json.extend(relevent_location.access_rule.explain_json(state))
-                ctx.ui.print_json(returned_json)
+                ctx.print_json(returned_json)
+            if relevent_entrance:
+                if hasattr(current_world, "explain_path"):
+                    returned_json = current_world.explain_path(relevent_entrance,state)
+                    if returned_json:
+                        if isinstance(returned_json,list) and not isinstance(returned_json[0],list):
+                            ctx.print_json(returned_json)
+                        else:
+                            for message in returned_json:
+                                ctx.print_json(message)
+                        return
+                returned_json = [{"type":"text","text":"->"},{"type":"color","color":"blue","text":relevent_entrance.name}]
+                if hasattr(relevent_entrance.access_rule,"explain_json"):
+                    returned_json.append({"type":"text","text":":\n    "})
+                    returned_json.extend(relevent_entrance.access_rule.explain_json(state))
+                ctx.print_json(returned_json)
+
         else:
             logger.info(f"{dest_name} not in logic")
 
