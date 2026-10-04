@@ -121,7 +121,7 @@ class TrackerSettings(Group):
     sorting_method: SortingMethod | str = "apworld"
 
 class ItemLayoutConfiguration:
-    name: str | None
+    name: str
     items: list[str]
     orientation: Literal["tb", "lr"]
     cols: int
@@ -130,9 +130,9 @@ class ItemLayoutConfiguration:
     item_width: int
     item_height: int
 
-    def __init__(self, items: str | list[str],name: str | None = None,  
-                 orientation: Literal["tb", "lr"] = "lr", 
-                 cols: int = 5, rows: int = -1, 
+    def __init__(self, name: str, items: str | list[str],
+                 orientation: Literal["tb", "lr"] = "lr",
+                 cols: int = 5, rows: int = -1,
                  item_size: tuple[int, int] = (48,48)):
         self.name = name
         if isinstance(items, str):
@@ -190,6 +190,9 @@ class UTMapTabData:
     item_page_item_layouts: list[ItemLayoutConfiguration]
     """A list of configuration objects describing the layout of the item tracker"""
 
+    poptracker_item_mapping: dict[str, str]
+    """Mapping from [poptracker item name : datapackage item name] """
+
     map_page_setting_key: str
     """Data storage key used to determine which page should be loaded"""
 
@@ -212,8 +215,8 @@ class UTMapTabData:
     """Function used to convert between the map and the value in data storage into coords (or none to hide it) the return is [x, y, override path string]"""
 
     def __init__(
-            self, player_id, team_id, map_page_folder: str = "", map_page_maps: list[str] | str = "",
-            map_page_locations: list[str] | str = "", map_page_layouts: list[str] | str | None = None,
+            self, player_id, team_id, map_page_folder: str = "", map_page_maps: list[str] | str | None = None,
+            map_page_locations: list[str] | str | None = None, map_page_layouts: list[str] | str | None = None,
             map_page_groups: list[tuple[str, list]] | None  = None, item_page_items: list[str] | str = "", 
             map_page_item_layouts_left: list[ItemLayoutConfiguration] | None = None,
             map_page_item_layouts_right: list[ItemLayoutConfiguration] | None = None,
@@ -221,34 +224,24 @@ class UTMapTabData:
             item_page_item_layouts: list[ItemLayoutConfiguration] | None = None,
             map_page_setting_key: str | None = None, map_page_index: Callable[[Any], int] | None = None,
             external_pack_key: str = "", poptracker_name_mapping: dict[str, int] | None = None,
+            poptracker_item_mapping: dict[str, int] | None = None,
             location_setting_key: str|None = None,
             location_icon_coords: Callable[[int, Any], tuple[int,int]]|None= None,
             poptracker_entrance_mapping: dict[str, str]|None = None, **kwargs):
 
-        item_page_items = "items/items.json"
-        map_page_item_layouts_left = [
-            ItemLayoutConfiguration(items="Lord Souls",         name="Progression Items",   orientation="lr", cols=4),
-            ItemLayoutConfiguration(items="Lordvessel",                                     orientation="lr", cols=1),
-            ItemLayoutConfiguration(items=["Key items", "Progression Items"],               orientation="lr", cols=4)
-        ]
-        map_page_item_layouts_bottom = [
-            ItemLayoutConfiguration(items="Fog Wall Keys",      name="Fog Walls",           orientation="tb", rows=1, item_size=(36, 48)),
-            ItemLayoutConfiguration(items="Boss Fog Wall Keys", name="Boss Fog Walls",      orientation="tb", rows=1, item_size=(36, 48))
-        ]
-
-        item_page_item_layouts = [
-            ItemLayoutConfiguration(items="Everything",         name="All Items",           orientation="lr", cols=12, item_size=(64, 64))
-        ]
-        
         self.map_page_folder = map_page_folder
         if isinstance(map_page_maps, str):
             self.map_page_maps = [map_page_maps]
-        else:
+        elif isinstance(map_page_maps, list):
             self.map_page_maps = map_page_maps
+        else:
+            self.map_page_maps = []
         if isinstance(map_page_locations, str):
             self.map_page_locations = [map_page_locations]
-        else:
+        elif isinstance(map_page_locations, list):
             self.map_page_locations = map_page_locations
+        else:
+            self.map_page_locations = []
         if isinstance(map_page_layouts, str):
             self.map_page_layouts = [map_page_layouts]
         elif isinstance(map_page_layouts, list):
@@ -287,6 +280,10 @@ class UTMapTabData:
             self.poptracker_name_mapping = poptracker_name_mapping
         else:
             self.poptracker_name_mapping = {}
+        if poptracker_item_mapping:
+            self.poptracker_item_mapping = poptracker_item_mapping
+        else:
+            self.poptracker_item_mapping = {}
         if poptracker_entrance_mapping:
             self.poptracker_entrance_mapping = poptracker_entrance_mapping
         else:

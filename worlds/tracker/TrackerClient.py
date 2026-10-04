@@ -670,7 +670,20 @@ class TrackerGameContext(CommonContext):
         self.parse_map_groups()
         self.load_map(None)
         for func in self.item_page_funcs:
-            func(self, items)
+            func(self, { item["name"]: item for item in items })
+
+    def set_root_pack_path(self):
+        if self.tracker_world.external_pack_key:
+            from zipfile import is_zipfile
+            packRef = self.tracker_core.get_current_world().settings[self.tracker_world.external_pack_key]
+            if packRef and is_zipfile(packRef):
+                self.root_pack_path = f"ap:zip:{packRef}"
+            else:
+                logger.error("Player poptracker doesn't seem to exist :< (must be a zip file)")
+                return
+        else:
+            PACK_NAME = self.tracker_core.get_current_world().__class__.__module__
+            self.root_pack_path = f"ap:{PACK_NAME}/{self.tracker_world.map_page_folder}"
 
     def load_map(self, map_id: Union[int, str, None]):
         """REMEMBER TO RUN UPDATE_TRACKER!"""
@@ -680,6 +693,8 @@ class TrackerGameContext(CommonContext):
             key = self.tracker_world.map_page_setting_key or f"{self.slot}_{self.team}_{UT_MAP_TAB_KEY}"
             map_id = self.tracker_world.map_page_index(self.stored_data.get(key, ""))
             if not self.auto_tab or map_id < 0 or map_id >= len(self.maps):
+                if self.tracker_world.item_page_items and self.tracker_world.item_page_item_layouts:
+                    self.set_root_pack_path() # ugh, even when there are no maps, we need the root pack path for the item tracker. This feels messy though (...but it works)
                 return  # special case, don't load a new map
         if self.map_id is not None and self.map_id == map_id:
             return  # map already loaded
@@ -707,17 +722,9 @@ class TrackerGameContext(CommonContext):
             self.ui.current_map = m["name"]
         location_name_to_id = AutoWorld.AutoWorldRegister.world_types[self.game].location_name_to_id
         # m = [m for m in self.maps if m["name"] == map_name]
-        if self.tracker_world.external_pack_key:
-            from zipfile import is_zipfile
-            packRef = self.tracker_core.get_current_world().settings[self.tracker_world.external_pack_key]
-            if packRef and is_zipfile(packRef):
-                self.root_pack_path = f"ap:zip:{packRef}"
-            else:
-                logger.error("Player poptracker doesn't seem to exist :< (must be a zip file)")
-                return
-        else:
-            PACK_NAME = self.tracker_core.get_current_world().__class__.__module__
-            self.root_pack_path = f"ap:{PACK_NAME}/{self.tracker_world.map_page_folder}"
+        
+        self.set_root_pack_path()
+
         self.ui.source = f"{self.root_pack_path}/{m['img']}"
         self.ui.loc_size = m["location_size"] if "location_size" in m else 65  # default location size per poptracker/src/core/map.h
         self.ui.loc_icon_size = m["location_icon_size"] if "location_icon_size" in m else self.ui.loc_size
@@ -865,6 +872,7 @@ class TrackerGameContext(CommonContext):
 
     def build_gui(self, manager: "GameManager"):
         from kivy.uix.boxlayout import BoxLayout
+        from kivy.uix.relativelayout import RelativeLayout
         from kivy.uix.stacklayout import StackLayout
         from kivy.uix.label import Label
         from kivy.uix.effectwidget import EffectWidget, MonochromeEffect
@@ -1097,7 +1105,7 @@ class TrackerGameContext(CommonContext):
             grid: ApItemGrid
             modified: bool
             marker_alpha = NumericProperty(0)
-            marker_color = ColorProperty("#"+get_ut_color("glitched"))
+            marker_color = ColorProperty("#"+get_ut_color("mixed_logic"))
 
             manual_collect_callback: Callable[[str], None] = lambda *_: {}
             manual_uncollect_callback: Callable[[str], None] = lambda *_: {}
@@ -1136,7 +1144,10 @@ class TrackerGameContext(CommonContext):
 
             def __init__(self, grid, source, id, name, **kwargs):
                 super().__init__(grid, id, name, **kwargs)
-                self.add_widget(ApAsyncImage(fit_mode="contain", source=source, **kwargs))
+                img = ApAsyncImage(fit_mode="contain", source=source, **kwargs)
+                img.texture.min_filter = 'nearest'
+                img.texture.mag_filter = 'nearest'
+                self.add_widget(img)
                 self.effects = [MonochromeEffect()]
                 self.enabled = False
 
@@ -1164,53 +1175,157 @@ class TrackerGameContext(CommonContext):
                 
                 return super().on_press()
 
+        class ApCounter(Label):
+            pass
+
+        class ApItemCounterIcon(ApItemIcon, RelativeLayout):
+            amount: int = 0
+            max: int = 1
+
+            counter: ApCounter
+
+            def __init__(self, grid, source, id, name, max, **kwargs):
+                super().__init__(grid, id, name, **kwargs)
+                self.max = max
+                img = ApAsyncImage(fit_mode="contain", source=source, **kwargs)
+                img.texture.min_filter = 'nearest'
+                img.texture.mag_filter = 'nearest'
+                img.size = self.size
+                self.add_widget(img)
+
+                self.counter = ApCounter()
+                self.add_widget(self.counter)
+
+            def update(self, amount: int):
+                self.amount = amount
+                self.counter.text = str(amount)
+                if amount == 0:
+                    self.counter.color = get_ut_color('out_of_logic')
+                elif amount >= self.max:
+                    self.counter.color = get_ut_color('in_logic')
+                else:
+                    self.counter.color = get_ut_color('mixed_logic')
+
+            def on_press(self):
+                if self.last_touch.button == 'left':
+                    if self.amount < self.max:
+                        self.manual_collect_callback(self.item_name)
+                elif self.last_touch.button == 'right':
+                    if self.modified:
+                        self.manual_uncollect_callback(self.item_name)
+                elif self.last_touch.button == 'middle':
+                    self.manual_reset_callback(self.item_name)
+                
+                return super().on_press()
+
+        class ApItemProgressiveIcon(ApItemIcon, EffectWidget):
+            amount: int = 0
+            max: int = 1
+            images: list[ApAsyncImage] = []
+
+            def __init__(self, grid, sources, id, name, max, **kwargs):
+                super().__init__(grid, id, name, **kwargs)
+                self.max = max
+                self.images = []
+                for source in sources:
+                    img = ApAsyncImage(fit_mode="contain", source=source, **kwargs)
+                    img.texture.min_filter = 'nearest'
+                    img.texture.mag_filter = 'nearest'
+                    self.images.append(img)
+                self.add_widget(self.images[0])
+                self.effects = [MonochromeEffect()]
+
+            def update(self, amount: int):
+                if self.amount != amount:
+                    self.amount = amount
+                    self.clear_widgets()
+
+                    if amount == 0:
+                        self.add_widget(self.images[0])
+                        self.effects = [MonochromeEffect()]
+                    elif amount - 1 >= len(self.images):
+                        self.add_widget(self.images[-1])
+                        self.effects = []
+                    else:
+                        self.add_widget(self.images[amount - 1])
+                        self.effects = []
+
+            def on_press(self):
+                if self.last_touch.button == 'left':
+                    if self.amount < self.max:
+                        self.manual_collect_callback(self.item_name)
+                elif self.last_touch.button == 'right':
+                    if self.modified:
+                        self.manual_uncollect_callback(self.item_name)
+                elif self.last_touch.button == 'middle':
+                    self.manual_reset_callback(self.item_name)
+                
+                return super().on_press()
+            
         class ItemGrid():
             item_icons: list[ApItemIcon]
 
             def reset_grid(self):
                 self.item_icons = []
 
-            def init_grid(self, layout_id: str, layout_configs: list[ItemLayoutConfiguration], ctx: TrackerGameContext, items: list, vert: bool = False):
-                item_tracker_groups = self.ids.get(layout_id)
+            def init_grid(self, layout_id: str, layout_configs: list[ItemLayoutConfiguration], ctx: TrackerGameContext, items: dict[str, Any], vert: bool = True):
+                item_tracker_groups: StackLayout = self.ids.get(layout_id)
                 item_tracker_groups.clear_widgets()
 
                 item_groups_lookup = Utils.persistent_load().get("groups_by_checksum", {}).get(ctx.checksums[ctx.game], {}).get(ctx.game, {}).get("item_name_groups", {})
-                grids: dict[ItemLayoutConfiguration | None, ApItemGrid] = {}
+                grids: dict[ItemLayoutConfiguration, ApItemGrid] = {}
 
                 for layout_config in layout_configs:
                     grids[layout_config] = ApItemGrid()
 
                 itempool = ctx.tracker_core.multiworld.itempool
-                for item in items:
-                    if "img" not in item.keys():
-                        continue
 
-                    item_name = item["name"]
-                    pool_item = next((pool_item for pool_item in itempool if pool_item.name == item_name), None)
+                added_items = set()
 
-                    if pool_item == None:
-                        continue
+                for layout_config, grid in grids.items():
 
-                    for layout_config, grid in grids.items():
-                        belongs_to_grid = False
+                    for item_group in layout_config.items:
+                        items_to_add = [ item_group ]
 
-                        for item_group in layout_config.items:
-                            if item_group in item_groups_lookup:
-                                if item_name in item_groups_lookup[item_group]:
-                                    belongs_to_grid = True
-                                    break
-                            elif item_group == item_name:
-                                belongs_to_grid = True
-                                break
+                        if item_group in item_groups_lookup:
+                            items_to_add = item_groups_lookup[item_group]
 
-                        if belongs_to_grid:
-                            icon = ApItemToggleIcon(grid=grid, size=layout_config.item_size, source=f"{ctx.root_pack_path}{item["img"]}", id=pool_item.code, name=item_name)
+                    for item in items_to_add:
+                        if item in added_items:
+                            continue
+                        pop_name = next((pop_name for pop_name, item_name in ctx.tracker_world.poptracker_item_mapping.items() if item_name == item), item)
+                        if pop_name not in items.keys():
+                            continue
+                        pool_item = next((pool_item for pool_item in itempool if pool_item.name == item), None)
+                        if pool_item == None:
+                            continue
+
+                        icon: ApItemToggleIcon | ApItemCounterIcon | None = None
+                        match items[pop_name]["type"]:
+                            case "toggle":
+                                icon = ApItemToggleIcon(size=layout_config.item_size,
+                                                        grid=grid, id=pool_item.code, name=item,
+                                                        source=os.path.join(ctx.root_pack_path, items[pop_name]["img"]))
+                            case "consumable":
+                                occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
+                                icon = ApItemCounterIcon(size=layout_config.item_size,
+                                                        grid=grid, id=pool_item.code, name=item,
+                                                        source=os.path.join(ctx.root_pack_path, items[pop_name]["img"]), max=occurences_in_pool)
+                            case "progressive":
+                                occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
+                                sources: list[str] = []
+                                for stage in items[pop_name]["stages"]:
+                                    sources.append(os.path.join(ctx.root_pack_path, stage["img"]))
+                                icon = ApItemProgressiveIcon(size=layout_config.item_size,
+                                                            grid=grid, id=pool_item.code, name=item,
+                                                            sources=sources, max=occurences_in_pool)
+                        if icon:
                             icon.manual_collect_callback = ctx.manually_collect_item
                             icon.manual_uncollect_callback = ctx.manually_uncollect_item
                             icon.manual_reset_callback = ctx.manually_reset_item
                             self.item_icons.append(icon)
                             grid.add_widget(icon)
-                            break
+                            added_items.add(item)
 
                 for layout_config, grid in grids.items():
                     if layout_config.orientation == "lr":
@@ -1221,46 +1336,56 @@ class TrackerGameContext(CommonContext):
                         grid.height = layout_config.item_height * layout_config.rows
 
                     if len(grid.children) > 0:
-                        if layout_config.name != None:
-                            header = ApItemGridHeader(text=layout_config.name)
-                            if not vert:
-                                header.size_hint = (1, None)
-                            item_tracker_groups.add_widget(header)
-                        item_tracker_groups.add_widget(grid)
+                        grid_container = BoxLayout(orientation='vertical', size_hint=(None, None))
+                        header = ApItemGridHeader(text=layout_config.name)
+                        
+                        grid_container.add_widget(header)
+                        grid_container.add_widget(grid)
+
+                        item_tracker_groups.add_widget(grid_container)
 
                         grid.do_layout()
                         if layout_config.orientation == "lr":
                             grid.height = grid.minimum_height
                         else:
                             grid.width = grid.minimum_width
+                        header.texture_update()
+                        grid_container.do_layout()
+                        grid_container.size = grid_container.minimum_size
+
 
                 max_size = 0
-                for grid in grids.values():
+                for grid_container in item_tracker_groups.children:
                     if vert:
-                        if grid.height > max_size:
-                            max_size = grid.height
+                        if grid_container.width > max_size:
+                            max_size = grid_container.width
                     else:
-                        if grid.width > max_size:
-                            max_size = grid.width
+                        if grid_container.height > max_size:
+                            max_size = grid_container.height
 
                 if vert:
-                    item_tracker_groups.parent.height = max_size + 28
-                else:
                     item_tracker_groups.parent.width = max_size
+                else:
+                    item_tracker_groups.parent.height = max_size
                 
             def update_items(self, inventory: dict[any, int], manual_items: list[str]):
                 for item_icon in self.item_icons:
-                    if isinstance(item_icon, ApItemToggleIcon):
-                        collected = next((inv_item for inv_item, _ in inventory if inv_item == item_icon.item_name), None) != None
-                        manually_collected = next((manual_item for manual_item in manual_items if manual_item == item_icon.item_name), None) != None
-                        if collected or manually_collected:
-                            item_icon.enable()
-                        else:
-                            item_icon.disable()
-                        item_icon.set_modified(manually_collected)
+                    collected = next((amount for inv_item, amount in inventory if inv_item == item_icon.item_name), 0)
+                    manually_collected = next((manual_item for manual_item in manual_items if manual_item == item_icon.item_name), None) != None
+                    match item_icon:
+                        case ApItemToggleIcon():
+                            if collected > 0:
+                                item_icon.enable()
+                            else:
+                                item_icon.disable()
+                        case ApItemCounterIcon():
+                            item_icon.update(collected)
+                        case ApItemProgressiveIcon():
+                            item_icon.update(collected)
+                    item_icon.set_modified(manually_collected)
 
         class ItemTracker(BoxLayout, ItemGrid):
-            def load_items(self, ctx: TrackerGameContext, items: list):
+            def load_items(self, ctx: TrackerGameContext, items: dict[str, Any]):
                 self.reset_grid()
                 if (ctx.tracker_world.item_page_item_layouts and len(ctx.tracker_world.item_page_item_layouts) > 0):
                     self.init_grid("item_tracker_full", ctx.tracker_world.item_page_item_layouts, ctx, items)
@@ -1323,7 +1448,7 @@ class TrackerGameContext(CommonContext):
                 if (ctx.tracker_world.map_page_item_layouts_right and len(ctx.tracker_world.map_page_item_layouts_right) > 0):
                     self.init_grid("item_tracker_right", ctx.tracker_world.map_page_item_layouts_right, ctx, items)
                 if (ctx.tracker_world.map_page_item_layouts_bottom and len(ctx.tracker_world.map_page_item_layouts_bottom) > 0):
-                    self.init_grid("item_tracker_bottom", ctx.tracker_world.map_page_item_layouts_bottom, ctx, items, True)
+                    self.init_grid("item_tracker_bottom", ctx.tracker_world.map_page_item_layouts_bottom, ctx, items, False)
 
         try:
             tracker = TrackerLayout(orientation="vertical")
@@ -1629,7 +1754,8 @@ class TrackerGameContext(CommonContext):
                 if self.tracker_world:
                     self.load_pack()
                     if self.tracker_world:  # don't show the map if loading failed
-                        self.ui.show_map = True
+                        if self.tracker_world.map_page_maps and self.tracker_world.map_page_locations:
+                            self.ui.show_map = True
                         if self.tracker_world.item_page_items and self.tracker_world.item_page_item_layouts:
                             self.ui.show_items = True
                         if self.tracker_world.map_page_index:

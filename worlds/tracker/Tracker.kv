@@ -238,8 +238,10 @@
 
 <ApItemGridHeader>:
     bold: True
-    size_hint: None, None
+    size_hint: 1, None
     size: self.texture_size
+    halign: "center"
+    valign: "center"
     padding: 4
 
 <ApItemGrid>:
@@ -254,4 +256,14 @@
             a: self.marker_alpha
         Line:
             width: 1
-            rectangle: self.x + 1, self.y + 1, self.width - 2, self.height - 2
+            rectangle: self.x + 1, self.y + 1, self.width - 1, self.height - 1
+
+<ApCounter>:
+    bold: True
+    size_hint: 1, 1
+    text_size: self.size
+    halign: "right"
+    valign: "bottom"
+    padding: 2, 1
+    outline_width: 2
+    outline_color: 0, 0, 0
