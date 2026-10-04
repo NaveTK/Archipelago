@@ -1195,8 +1195,6 @@ class TrackerGameContext(CommonContext):
             def __init__(self, grid, source, id, name, **kwargs):
                 super().__init__(grid, id, name, **kwargs)
                 img = ApAsyncImage(fit_mode="contain", source=source, **kwargs)
-                img.texture.min_filter = 'nearest'
-                img.texture.mag_filter = 'nearest'
                 self.add_widget(img)
                 self.effects = [MonochromeEffect()]
                 self.enabled = False
@@ -1238,8 +1236,6 @@ class TrackerGameContext(CommonContext):
                 super().__init__(grid, id, name, **kwargs)
                 self.max = max
                 img = ApAsyncImage(fit_mode="contain", source=source, **kwargs)
-                img.texture.min_filter = 'nearest'
-                img.texture.mag_filter = 'nearest'
                 img.size = self.size
                 self.add_widget(img)
 
@@ -1279,8 +1275,6 @@ class TrackerGameContext(CommonContext):
                 self.images = []
                 for source in sources:
                     img = ApAsyncImage(fit_mode="contain", source=source, **kwargs)
-                    img.texture.min_filter = 'nearest'
-                    img.texture.mag_filter = 'nearest'
                     self.images.append(img)
                 self.add_widget(self.images[0])
                 self.effects = [MonochromeEffect()]
@@ -1318,7 +1312,7 @@ class TrackerGameContext(CommonContext):
             def reset_grid(self):
                 self.item_icons = []
 
-            def init_grid(self, layout_id: str, layout_configs: list[ItemLayoutConfiguration], ctx: TrackerGameContext, items: dict[str, Any], vert: bool = True):
+            def init_grid(self, layout_id: str, layout_configs: list[ItemLayoutConfiguration], ctx: TrackerGameContext, items: dict[str], vert: bool = True):
                 item_tracker_groups: StackLayout = self.ids.get(layout_id)
                 item_tracker_groups.clear_widgets()
 
@@ -1353,22 +1347,26 @@ class TrackerGameContext(CommonContext):
                         icon: ApItemToggleIcon | ApItemCounterIcon | None = None
                         match items[pop_name]["type"]:
                             case "toggle":
-                                icon = ApItemToggleIcon(size=layout_config.item_size,
-                                                        grid=grid, id=pool_item.code, name=item,
-                                                        source=os.path.join(ctx.root_pack_path, items[pop_name]["img"]))
-                            case "consumable":
-                                occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
-                                icon = ApItemCounterIcon(size=layout_config.item_size,
-                                                        grid=grid, id=pool_item.code, name=item,
-                                                        source=os.path.join(ctx.root_pack_path, items[pop_name]["img"]), max=occurences_in_pool)
-                            case "progressive":
-                                occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
-                                sources: list[str] = []
-                                for stage in items[pop_name]["stages"]:
-                                    sources.append(os.path.join(ctx.root_pack_path, stage["img"]))
-                                icon = ApItemProgressiveIcon(size=layout_config.item_size,
+                                if "img" in items[pop_name].keys():
+                                    icon = ApItemToggleIcon(size=layout_config.item_size,
                                                             grid=grid, id=pool_item.code, name=item,
-                                                            sources=sources, max=occurences_in_pool)
+                                                            source=f"{ctx.root_pack_path}/{items[pop_name]["img"]}")
+                            case "consumable":
+                                if "img" in items[pop_name].keys():
+                                    occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
+                                    icon = ApItemCounterIcon(size=layout_config.item_size,
+                                                            grid=grid, id=pool_item.code, name=item,
+                                                            source=f"{ctx.root_pack_path}/{items[pop_name]["img"]}", max=occurences_in_pool)
+                            case "progressive":
+                                if "stages" in items[pop_name].keys():
+                                    occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
+                                    sources: list[str] = []
+                                    for stage in items[pop_name]["stages"]:
+                                        if "img" in stage.keys():
+                                            sources.append(f"{ctx.root_pack_path}/{stage["img"]}")
+                                    icon = ApItemProgressiveIcon(size=layout_config.item_size,
+                                                                grid=grid, id=pool_item.code, name=item,
+                                                                sources=sources, max=occurences_in_pool)
                         if icon:
                             icon.manual_collect_callback = ctx.manually_collect_item
                             icon.manual_uncollect_callback = ctx.manually_uncollect_item
@@ -1435,7 +1433,7 @@ class TrackerGameContext(CommonContext):
                     item_icon.set_modified(manually_collected)
 
         class ItemTracker(BoxLayout, ItemGrid):
-            def load_items(self, ctx: TrackerGameContext, items: dict[str, Any]):
+            def load_items(self, ctx: TrackerGameContext, items: dict[str]):
                 self.reset_grid()
                 if (ctx.tracker_world.item_page_item_layouts and len(ctx.tracker_world.item_page_item_layouts) > 0):
                     self.init_grid("item_tracker_full", ctx.tracker_world.item_page_item_layouts, ctx, items)
