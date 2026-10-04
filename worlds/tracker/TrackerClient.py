@@ -12,7 +12,7 @@ from BaseClasses import CollectionState, Location, LocationProgressType
 from Utils import __version__, async_start, open_filename, persistent_load, persistent_store
 import Utils
 from worlds import AutoWorld
-from . import ItemLayoutConfiguration, TrackerWorld, UTMapTabData, CurrentTrackerState, UT_VERSION
+from . import ItemLayoutSection, TrackerWorld, UTMapTabData, CurrentTrackerState, UT_VERSION
 from .TrackerCore import TrackerCore
 from collections import Counter, defaultdict
 from MultiServer import mark_raw
@@ -1312,12 +1312,12 @@ class TrackerGameContext(CommonContext):
             def reset_grid(self):
                 self.item_icons = []
 
-            def init_grid(self, layout_id: str, layout_configs: list[ItemLayoutConfiguration], ctx: TrackerGameContext, items: dict[str], vert: bool = True):
+            def init_grid(self, layout_id: str, layout_configs: list[ItemLayoutSection], ctx: TrackerGameContext, items: dict[str], vert: bool = True):
                 item_tracker_groups: StackLayout = self.ids.get(layout_id)
                 item_tracker_groups.clear_widgets()
 
                 item_groups_lookup = Utils.persistent_load().get("groups_by_checksum", {}).get(ctx.checksums[ctx.game], {}).get(ctx.game, {}).get("item_name_groups", {})
-                grids: dict[ItemLayoutConfiguration, ApItemGrid] = {}
+                grids: dict[ItemLayoutSection, ApItemGrid] = {}
 
                 for layout_config in layout_configs:
                     grids[layout_config] = ApItemGrid()

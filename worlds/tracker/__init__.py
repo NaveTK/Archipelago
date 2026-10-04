@@ -126,7 +126,7 @@ class TrackerSettings(Group):
     sorting_priorities: SortingPriorties | dict[str, int] = {}
     sorting_method: SortingMethod | str = "apworld"
 
-class ItemLayoutConfiguration:
+class ItemLayoutSection:
     name: str
     items: list[str]
     orientation: Literal["tb", "lr"]
@@ -184,16 +184,16 @@ class UTMapTabData:
     item_page_items: list[str]
     """The relative paths within the map_page_folder of the items.json"""
 
-    map_page_item_layouts_left: list[ItemLayoutConfiguration]
+    map_page_item_layouts_left: list[ItemLayoutSection]
     """A list of configuration objects describing the layout of the left item panel on the map page"""
 
-    map_page_item_layouts_right: list[ItemLayoutConfiguration]
+    map_page_item_layouts_right: list[ItemLayoutSection]
     """A list of configuration objects describing the layout of the right item panel on the map page"""
 
-    map_page_item_layouts_bottom: list[ItemLayoutConfiguration]
+    map_page_item_layouts_bottom: list[ItemLayoutSection]
     """A list of configuration objects describing the layout of the bottom item panel on the map page"""
 
-    item_page_item_layouts: list[ItemLayoutConfiguration]
+    item_page_item_layouts: list[ItemLayoutSection]
     """A list of configuration objects describing the layout of the item tracker"""
 
     poptracker_item_mapping: dict[str, str]
@@ -224,10 +224,10 @@ class UTMapTabData:
             self, player_id, team_id, map_page_folder: str = "", map_page_maps: list[str] | str | None = None,
             map_page_locations: list[str] | str | None = None, map_page_layouts: list[str] | str | None = None,
             map_page_groups: list[tuple[str, list]] | None  = None, item_page_items: list[str] | str = "", 
-            map_page_item_layouts_left: list[ItemLayoutConfiguration] | None = None,
-            map_page_item_layouts_right: list[ItemLayoutConfiguration] | None = None,
-            map_page_item_layouts_bottom: list[ItemLayoutConfiguration] | None = None,
-            item_page_item_layouts: list[ItemLayoutConfiguration] | None = None,
+            map_page_item_layouts_left: list[ItemLayoutSection] | None = None,
+            map_page_item_layouts_right: list[ItemLayoutSection] | None = None,
+            map_page_item_layouts_bottom: list[ItemLayoutSection] | None = None,
+            item_page_item_layouts: list[ItemLayoutSection] | None = None,
             map_page_setting_key: str | None = None, map_page_index: Callable[[Any], int] | None = None,
             external_pack_key: str = "", poptracker_name_mapping: dict[str, int] | None = None,
             poptracker_item_mapping: dict[str, int] | None = None,
