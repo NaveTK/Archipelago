@@ -118,13 +118,48 @@ def kv_unescape(text: str) -> str:
 
 
 class ThemedApp(MDApp):
+
     def set_colors(self):
+        import threading
+
+        self.apply_theme()
+
+        thread = threading.Thread(target=self.hot_reload_theme, daemon=True)
+        thread.start()
+
+    def apply_theme(self):
         text_colors = KivyJSONtoTextParser.TextColors()
         self.theme_cls.theme_style = text_colors.theme_style
         self.theme_cls.primary_palette = text_colors.primary_palette
         self.theme_cls.dynamic_scheme_name = text_colors.dynamic_scheme_name
         self.theme_cls.dynamic_scheme_contrast = text_colors.dynamic_scheme_contrast
+        if hasattr(self, "top_screen"):
+            self.top_screen.md_bg_color = self.theme_cls.backgroundColor
 
+    def hot_reload_theme(self):
+        import time
+        from pathlib import Path
+        
+        last_timestamp = 0.0
+        user_file = Utils.user_path("data", "user.kv")
+
+        while True:
+            if os.path.exists(user_file):
+                timestamp = Path(user_file).stat().st_mtime
+
+                if timestamp > last_timestamp:
+                    last_timestamp = timestamp
+
+                    Clock.schedule_once(
+                        lambda dt: self.reload_theme(user_file)
+                    )
+
+            time.sleep(1)
+
+    def reload_theme(self, user_file):
+        Builder.load_file(Utils.local_path("data", "client.kv"))
+        Builder.load_file(user_file)
+        self.apply_theme()
 
 class LogtoLoadingScreen(logging.Handler):
     def __init__(self, on_log):
