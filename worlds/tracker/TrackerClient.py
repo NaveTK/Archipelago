@@ -1345,28 +1345,27 @@ class TrackerGameContext(CommonContext):
                             continue
 
                         icon: ApItemToggleIcon | ApItemCounterIcon | None = None
-                        match items[pop_name]["type"]:
-                            case "toggle":
-                                if "img" in items[pop_name].keys():
-                                    icon = ApItemToggleIcon(size=layout_config.item_size,
+                        if items[pop_name]["type"] == "toggle":
+                            if "img" in items[pop_name].keys():
+                                icon = ApItemToggleIcon(size=layout_config.item_size,
+                                                        grid=grid, id=pool_item.code, name=item,
+                                                        source=f"{ctx.root_pack_path}/{items[pop_name]["img"]}")
+                        elif items[pop_name]["type"] == "consumable":
+                            if "img" in items[pop_name].keys():
+                                occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
+                                icon = ApItemCounterIcon(size=layout_config.item_size,
+                                                        grid=grid, id=pool_item.code, name=item,
+                                                        source=f"{ctx.root_pack_path}/{items[pop_name]["img"]}", max=occurences_in_pool)
+                        elif items[pop_name]["type"] == "progressive":
+                            if "stages" in items[pop_name].keys():
+                                occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
+                                sources: list[str] = []
+                                for stage in items[pop_name]["stages"]:
+                                    if "img" in stage.keys():
+                                        sources.append(f"{ctx.root_pack_path}/{stage["img"]}")
+                                icon = ApItemProgressiveIcon(size=layout_config.item_size,
                                                             grid=grid, id=pool_item.code, name=item,
-                                                            source=f"{ctx.root_pack_path}/{items[pop_name]["img"]}")
-                            case "consumable":
-                                if "img" in items[pop_name].keys():
-                                    occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
-                                    icon = ApItemCounterIcon(size=layout_config.item_size,
-                                                            grid=grid, id=pool_item.code, name=item,
-                                                            source=f"{ctx.root_pack_path}/{items[pop_name]["img"]}", max=occurences_in_pool)
-                            case "progressive":
-                                if "stages" in items[pop_name].keys():
-                                    occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
-                                    sources: list[str] = []
-                                    for stage in items[pop_name]["stages"]:
-                                        if "img" in stage.keys():
-                                            sources.append(f"{ctx.root_pack_path}/{stage["img"]}")
-                                    icon = ApItemProgressiveIcon(size=layout_config.item_size,
-                                                                grid=grid, id=pool_item.code, name=item,
-                                                                sources=sources, max=occurences_in_pool)
+                                                            sources=sources, max=occurences_in_pool)
                         if icon:
                             icon.manual_collect_callback = ctx.manually_collect_item
                             icon.manual_uncollect_callback = ctx.manually_uncollect_item
@@ -1420,16 +1419,15 @@ class TrackerGameContext(CommonContext):
                 for item_icon in self.item_icons:
                     collected = next((amount for inv_item, amount in inventory if inv_item == item_icon.item_name), 0)
                     manually_collected = next((manual_item for manual_item in manual_items if manual_item == item_icon.item_name), None) != None
-                    match item_icon:
-                        case ApItemToggleIcon():
-                            if collected > 0:
-                                item_icon.enable()
-                            else:
-                                item_icon.disable()
-                        case ApItemCounterIcon():
-                            item_icon.update(collected)
-                        case ApItemProgressiveIcon():
-                            item_icon.update(collected)
+                    if isinstance(item_icon, ApItemToggleIcon):
+                        if collected > 0:
+                            item_icon.enable()
+                        else:
+                            item_icon.disable()
+                    elif isinstance(item_icon, ApItemCounterIcon):
+                        item_icon.update(collected)
+                    elif isinstance(item_icon, ApItemProgressiveIcon):
+                        item_icon.update(collected)
                     item_icon.set_modified(manually_collected)
 
         class ItemTracker(BoxLayout, ItemGrid):
