@@ -87,6 +87,17 @@
                         text: "Recenter"
                         font_style: "Label"
                         role: "medium"
+                MDButton:
+                    style: "outlined"
+                    size_hint: None, None
+                    height: dp(32)
+                    pos_hint: {'center_y': 0.5}
+                    radius: [dp(4),dp(4),dp(4),dp(4)]
+                    on_release: app.clear_path()
+                    MDButtonText:
+                        text: "Clear Path"
+                        font_style: "Label"
+                        role: "medium"
 
             BoxStencil:
                 ScrollWheelZoomScatterLayout:
