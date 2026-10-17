@@ -1342,45 +1342,45 @@ class TrackerGameContext(CommonContext):
                         if item_group in item_groups_lookup:
                             items_to_add = item_groups_lookup[item_group]
 
-                    for item in items_to_add:
-                        if item in added_items:
-                            continue
-                        pop_name = next((pop_name for pop_name, item_name in ctx.tracker_world.poptracker_item_mapping.items() if item_name == item), item)
-                        if pop_name not in items.keys():
-                            continue
-                        pool_item = next((pool_item for pool_item in itempool if pool_item.name == item), None)
-                        if pool_item == None:
-                            continue
+                        for item in items_to_add:
+                            if item in added_items:
+                                continue
+                            pop_name = next((pop_name for pop_name, item_name in ctx.tracker_world.poptracker_item_mapping.items() if item_name == item), item)
+                            if pop_name not in items.keys():
+                                continue
+                            pool_item = next((pool_item for pool_item in itempool if pool_item.name == item), None)
+                            if pool_item == None:
+                                continue
 
-                        icon: ApItemToggleIcon | ApItemCounterIcon | None = None
-                        if items[pop_name]["type"] == "toggle":
-                            if "img" in items[pop_name].keys():
-                                icon = ApItemToggleIcon(size=layout_config.item_size,
-                                                        grid=grid, id=pool_item.code, name=item,
-                                                        source=f"{ctx.root_pack_path}/{items[pop_name]['img']}")
-                        elif items[pop_name]["type"] == "consumable":
-                            if "img" in items[pop_name].keys():
-                                occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
-                                icon = ApItemCounterIcon(size=layout_config.item_size,
-                                                        grid=grid, id=pool_item.code, name=item,
-                                                        source=f"{ctx.root_pack_path}/{items[pop_name]['img']}", max=occurences_in_pool)
-                        elif items[pop_name]["type"] == "progressive":
-                            if "stages" in items[pop_name].keys():
-                                occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
-                                sources: list[str] = []
-                                for stage in items[pop_name]["stages"]:
-                                    if "img" in stage.keys():
-                                        sources.append(f"{ctx.root_pack_path}/{stage['img']}")
-                                icon = ApItemProgressiveIcon(size=layout_config.item_size,
+                            icon: ApItemToggleIcon | ApItemCounterIcon | None = None
+                            if items[pop_name]["type"] == "toggle":
+                                if "img" in items[pop_name].keys():
+                                    icon = ApItemToggleIcon(size=layout_config.item_size,
                                                             grid=grid, id=pool_item.code, name=item,
-                                                            sources=sources, max=occurences_in_pool)
-                        if icon:
-                            icon.manual_collect_callback = ctx.manually_collect_item
-                            icon.manual_uncollect_callback = ctx.manually_uncollect_item
-                            icon.manual_reset_callback = ctx.manually_reset_item
-                            self.item_icons.append(icon)
-                            grid.add_widget(icon)
-                            added_items.add(item)
+                                                            source=f"{ctx.root_pack_path}/{items[pop_name]['img']}")
+                            elif items[pop_name]["type"] == "consumable":
+                                if "img" in items[pop_name].keys():
+                                    occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
+                                    icon = ApItemCounterIcon(size=layout_config.item_size,
+                                                            grid=grid, id=pool_item.code, name=item,
+                                                            source=f"{ctx.root_pack_path}/{items[pop_name]['img']}", max=occurences_in_pool)
+                            elif items[pop_name]["type"] == "progressive":
+                                if "stages" in items[pop_name].keys():
+                                    occurences_in_pool = sum(pool_item.name == item for pool_item in itempool)
+                                    sources: list[str] = []
+                                    for stage in items[pop_name]["stages"]:
+                                        if "img" in stage.keys():
+                                            sources.append(f"{ctx.root_pack_path}/{stage['img']}")
+                                    icon = ApItemProgressiveIcon(size=layout_config.item_size,
+                                                                grid=grid, id=pool_item.code, name=item,
+                                                                sources=sources, max=occurences_in_pool)
+                            if icon:
+                                icon.manual_collect_callback = ctx.manually_collect_item
+                                icon.manual_uncollect_callback = ctx.manually_uncollect_item
+                                icon.manual_reset_callback = ctx.manually_reset_item
+                                self.item_icons.append(icon)
+                                grid.add_widget(icon)
+                                added_items.add(item)
 
                 for layout_config, grid in grids.items():
                     if layout_config.orientation == "lr":
