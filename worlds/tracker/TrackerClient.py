@@ -1385,10 +1385,10 @@ class TrackerGameContext(CommonContext):
                 for layout_config, grid in grids.items():
                     if layout_config.orientation == "lr":
                         grid.orientation = "lr-tb"
-                        grid.width = layout_config.item_width * layout_config.cols
+                        grid.width = (layout_config.item_width + 4) * layout_config.cols + 12
                     else:
                         grid.orientation = "tb-lr"
-                        grid.height = layout_config.item_height * layout_config.rows
+                        grid.height = (layout_config.item_height + 4) * layout_config.rows + 12
 
                     if len(grid.children) > 0:
                         grid_container = BoxLayout(orientation='vertical', size_hint=(None, None))
